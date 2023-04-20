@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function Nav() {
   return (
-    <nav className="nav">
+    <div className="nav">
       <Link className=" nav-link nav-main" href="/">
         Bingka 61
       </Link>
@@ -28,6 +28,6 @@ export default function Nav() {
           </Link>
         </li>
       </ul>
-    </nav>
+    </div>
   );
 }
