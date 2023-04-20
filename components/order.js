@@ -41,7 +41,7 @@ export default function Order() {
   };
 
   return (
-    <div className="bg-white top-5 shadow-md rounded-lg px-4 py-6 space-y-4 ">
+    <div className="bg-white top-5 mt-24 mx-10 shadow-md rounded-lg px-7 py-6 space-y-6 ">
       {MENU_ITEMS.map((item) => (
         <div key={item.name} className="flex justify-between items-center">
           <div>
@@ -88,7 +88,7 @@ export default function Order() {
         </span>
       </div>
       <button
-        className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded"
+        className="bg-green-500 hover:bg-green-600 text-white flex justify-center font-bold py-2 px-6 rounded-lg  w-full "
         onClick={handleOrderSubmit}
       >
         Kirim Pesanan

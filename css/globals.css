@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: "Poppins";
+  src: url("../public/assets/Fonts/Poppins/Poppins-Regular.ttf")
+    format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
 :root {
   --max-width: 1100px;
   --border-radius: 12px;
@@ -15,6 +22,7 @@
   padding: 0;
   margin: 0;
   font-family: "Poppins";
+  font-style: normal;
 }
 h1 {
   width: 100%;
@@ -33,61 +41,6 @@ h1 {
   line-height: 60px;
 }
 
-.nav ul {
-  position: absolute;
-  display: flex;
-  justify-content: center; /* center the nav-item buttons */
-  width: auto; /* remove fixed width */
-  height: 36px;
-  margin-left: 0; /* remove left margin */
-  margin-right: 48px; /* add right margin */
-  font-family: "Poppins";
-  font-style: normal;
-  font-weight: 700;
-  font-size: 24px;
-  line-height: 36px;
-  bottom: 20px; /* position the nav-item buttons lower */
-}
-.nav li {
-  margin-left: 20px;
-}
-
-.nav {
-  position: sticky;
-  width: auto;
-  height: 162px;
-  margin: 42px 44.5px 42px 44.5px;
-
-  background: linear-gradient(163.82deg, #ff9f47 7.94%, #e18a39 97.05%);
-  mix-blend-mode: normal;
-  border-radius: 20px;
-}
-.nav-link {
-  margin-right: 16px; /* add some space between nav-item buttons */
-  margin-left: 16px;
-}
-.nav-main {
-  position: absolute;
-  transform: translateX(-50%);
-  width: auto;
-  height: 36px;
-  top: 50%;
-  left: 50px;
-  font-family: "Poppins";
-  font-style: normal;
-  font-weight: 700;
-  font-size: 24px;
-  line-height: 36px;
-  align-items: left;
-  /* identical to box height */
-  background: linear-gradient(
-    180deg,
-    #ffffff 0%,
-    rgba(255, 255, 255, 0.51) 100%
-  );
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
 body {
   background-image: url("../public/assets/bg.jpg");
   position: absolute;
@@ -96,12 +49,7 @@ body {
   left: 0px;
   top: 0px;
 }
-.nav-item {
-  float: right;
-}
-.Salam {
-  top: 1000px;
-}
+
 /* Small screens (max width 600px) */
 @media only screen and (max-width: 600px) {
   .nav {
