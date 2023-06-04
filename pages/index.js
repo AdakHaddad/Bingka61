@@ -1,9 +1,11 @@
-import Order from "@/components/order";
-// import Nav from "@/components/navbar";
+import Order from "@/components/order.js";
+import Nav from "@/components/nav.js";
+import { useState } from "react";
+
 export default function Page() {
   return (
     <>
-      <div>{/* <Nav /> */}</div>
+      <Nav />
       <div className="mt-14 ">
         <h1>Selamat Datang,</h1>
         <h1 className="description">

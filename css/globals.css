@@ -4,11 +4,37 @@
 
 @font-face {
   font-family: "Poppins";
-  src: url("../public/assets/Fonts/Poppins/Poppins-Regular.ttf")
-    format("truetype");
+  src: url("../public/Fonts/Poppins/Poppins-Regular.ttf") format("truetype");
   font-weight: normal;
   font-style: normal;
 }
+@font-face {
+  font-family: "Poppins";
+  font-style: normal;
+  font-weight: 400;
+  src: url("/Fonts/Poppins/Poppins-Regular.woff2") format("woff2"),
+    url("/Fonts/Poppins/Poppins-Regular.woff") format("woff"),
+    url("/Fonts/Poppins/Poppins-Regular.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Poppins";
+  font-style: normal;
+  font-weight: 500;
+  src: url("/Fonts/Poppins/Poppins-Medium.woff2") format("woff2"),
+    url("/Fonts/Poppins/Poppins-Medium.woff") format("woff"),
+    url("/Fonts/Poppins/Poppins-Medium.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Poppins";
+  font-style: normal;
+  font-weight: 700;
+  src: url("/Fonts/Poppins/Poppins-Bold.woff2") format("woff2"),
+    url("/Fonts/Poppins/Poppins-Bold.woff") format("woff"),
+    url("/Fonts/Poppins/Poppins-Bold.ttf") format("truetype");
+}
+
 :root {
   --max-width: 1100px;
   --border-radius: 12px;
@@ -48,6 +74,7 @@ body {
   height: 1628px;
   left: 0px;
   top: 0px;
+  font-family: "Poppins", sans-serif;
 }
 
 /* Small screens (max width 600px) */
