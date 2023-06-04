@@ -41,7 +41,7 @@ export default function Order() {
   };
 
   return (
-    <div className="bg-white top-5 mt-24 mx-10 shadow-md rounded-lg px-7 py-6 space-y-6 ">
+    <div className="bg-white top-5 mt-24 mx-10 mb-28 shadow-md rounded-lg px-7 py-6 space-y-6 ">
       {MENU_ITEMS.map((item) => (
         <div key={item.name} className="flex justify-between items-center">
           <div>

@@ -29,7 +29,7 @@ export default function Nav() {
 
   return (
     <nav
-      className={`bg-gradient-to-r from-orange-400 to-red-500 py-4 px-6 flex items-center justify-between sticky top-0 z-10 ${
+      className={`bg-black bg-opacity-5 backdrop-filter backdrop-blur-xl py-4 px-6 flex items-center justify-between sticky top-0 z-10 ${
         isNavbarVisible ? "opacity-100" : "opacity-0"
       } transition-opacity duration-500`}
     >
@@ -43,7 +43,10 @@ export default function Nav() {
             link="https://bingka61.blogspot.com"
             label="Blog"
           />
-          <a href="#" className="text-white font-bold text-xl ml-1">
+          <a
+            href="https://bingka61.blogspot.com"
+            className="text-white font-bold text-l ml-1"
+          >
             Blog
           </a>
         </div>
