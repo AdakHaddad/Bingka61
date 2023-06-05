@@ -14,7 +14,7 @@ export default function Footer() {
         </div>
         <div>
           <a
-            href="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d249.36362096970893!2d109.32607569817452!3d-0.025164847101731155!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e1d58f6dbf76fcf%3A0xc0e7959c0dd6385c!2sBingka%2061!5e0!3m2!1sen!2sid!4v1685907717888!5m2!1sen!2sid"
+            href="https://goo.gl/maps/SZ9rPmPmuXaC2f2EA"
             target="_blank"
             rel="noopener noreferrer"
             className="text-blue-300 hover:text-blue-500"
