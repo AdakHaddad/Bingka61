@@ -4,10 +4,10 @@ export default function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="bg-gray-900 text-white py-12 px-6">
+    <footer className="bg-gray-900 text-white py-10 px-6">
       <div className="container mx-auto flex justify-between items-center">
         <div>
-          <p className="mr-28">
+          <p className="min-w-0 mr-6">
             Alamat: Jl. Kiai Haji Wahid Hasyim No.61, Sungai Bangkong, Pontianak
             Kota, Kota Pontianak, Kalimantan Barat 78117
           </p>
