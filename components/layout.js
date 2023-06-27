@@ -3,7 +3,8 @@ import { Helmet } from "react-helmet";
 
 export const metadata = {
   title: "Bingke 61",
-  description: "Website Bingke 61",
+  description:
+    "Experience the authentic flavors of Indonesian cuisine at Bingke 61. We offer a wide range of delicious dishes in Pontianak, Kalimantan Barat. Visit us today and indulge in the rich culinary heritage of Indonesia.",
 };
 
 export default function RootLayout({ children }) {
@@ -19,7 +20,7 @@ export default function RootLayout({ children }) {
         {/* Additional SEO tags */}
         <meta
           name="keywords"
-          content="makanan Indonesia, Pontianak, Bingke 61, Kalimantan Barat,Bingkenye Umi, Sungai Jawi, Oleh-oleh"
+          content="Indonesian food, Pontianak, Bingke 61, Kalimantan Barat, authentic cuisine"
         />
         <meta name="author" content="Bingke 61" />
         <meta name="robots" content="index, follow" />
