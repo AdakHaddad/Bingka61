@@ -16,19 +16,19 @@ export default function RootLayout({ children }) {
         <meta name="description" content={metadata.description} />
         <title>{metadata.title}</title>
         <link rel="icon" href="/favicon.ico" />
-
-        {/* Additional SEO tags */}
+        <meta
+          name="google-site-verification"
+          content="jp4c1QT3ewOcc0RQ0_pDKs-I8RlOAciS2CoM2eRREyg"
+        />
         <meta
           name="keywords"
           content="Indonesian food, Pontianak, Bingke 61, Kalimantan Barat, authentic cuisine"
         />
         <meta name="author" content="Bingke 61" />
         <meta name="robots" content="index, follow" />
-
         {/* Language settings */}
         <meta http-equiv="content-language" content="id" />
         <meta name="language" content="Indonesian" />
-
         {/* Open Graph tags for better social media sharing */}
         <meta property="og:title" content={metadata.title} />
         <meta property="og:description" content={metadata.description} />
