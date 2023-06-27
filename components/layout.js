@@ -1,4 +1,5 @@
 import Head from "next/head";
+import React from "react";
 
 export const metadata = {
   title: "Bingke 61",
