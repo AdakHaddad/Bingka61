@@ -3,7 +3,7 @@ import { Helmet } from "react-helmet";
 
 export const metadata = {
   title: "Bingke 61",
-  description: "Oleh-oleh Makanan Indonesia Autentik di Pontianak",
+  description: "Website Bingke 61",
 };
 
 export default function RootLayout({ children }) {
@@ -19,7 +19,7 @@ export default function RootLayout({ children }) {
         {/* Additional SEO tags */}
         <meta
           name="keywords"
-          content="makanan Indonesia, Pontianak, Bingke 61, Kalimantan Barat, Umi, Haddad, Sungai Jawi, Oleh-oleh"
+          content="makanan Indonesia, Pontianak, Bingke 61, Kalimantan Barat,Bingkenye Umi, Sungai Jawi, Oleh-oleh"
         />
         <meta name="author" content="Bingke 61" />
         <meta name="robots" content="index, follow" />

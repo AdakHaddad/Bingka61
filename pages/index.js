@@ -14,6 +14,11 @@ export default function Page() {
     >
       <Nav />
       <Ucapan />
+      <img
+        src="/favicon.jpg"
+        className="hidden md:block w-12 h-12 z-0"
+        style={{ top: "250px", left: "950px" }}
+      />
       <Order />
       <Footer />
     </div>

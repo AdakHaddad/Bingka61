@@ -41,7 +41,7 @@ export default function Order() {
   };
 
   return (
-    <div className="top-5 mt-24 mx-10 mb-28">
+    <div className="top-5 md:mt-26 mt-24 mx-10 mb-28">
       <h1 className="text-center text-4xl font-bold text-white">Pemesanan</h1>
       <div className="bg-white top-5 mt-10 mb-2 shadow-md rounded-lg px-7 py-6 space-y-6 ">
         {MENU_ITEMS.map((item) => (

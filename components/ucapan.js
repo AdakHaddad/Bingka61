@@ -2,7 +2,7 @@ import React from "react";
 
 export default function Ucapan() {
   return (
-    <div className=" mx-14 mt-28 mb-60 text-left">
+    <div className=" mx-14 mt-28 md:mb-64 mb-60 text-left">
       <h1 className=" max-w-4xl text-left text-5xl font-bold  mb-14 text-white font-custom">
         Selamat Datang di Bingke 61!
       </h1>
