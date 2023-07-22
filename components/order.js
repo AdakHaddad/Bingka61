@@ -56,11 +56,15 @@ export default function Order() {
               <button
                 className="text-gray-500 font-bold text-2xl hover:text-gray-900"
                 onClick={() =>
-                  handleOrderChange(item, (orders[item.name] || 0) + 1)
+                  handleOrderChange(
+                    item,
+                    Math.max(0, (orders[item.name] || 0) - 1)
+                  )
                 }
               >
-                +
+                –
               </button>
+
               <input
                 type="number"
                 className="text-center w-16"
@@ -72,13 +76,10 @@ export default function Order() {
               <button
                 className="text-gray-500 font-bold text-2xl hover:text-gray-900"
                 onClick={() =>
-                  handleOrderChange(
-                    item,
-                    Math.max(0, (orders[item.name] || 0) - 1)
-                  )
+                  handleOrderChange(item, (orders[item.name] || 0) + 1)
                 }
               >
-                –
+                +
               </button>
             </div>
           </div>
