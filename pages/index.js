@@ -4,18 +4,21 @@ import Ucapan from "@/components/ucapan";
 import Footer from "@/components/footer";
 export default function Page() {
   return (
-    <div
-      className="bg-gradient-to-r from-yellow-400 via-red-500 to-pink-500"
-      style={{
-        backgroundSize: "200% 200%",
-        backgroundPosition: "center",
-        animation: "gradientAnimation 10s ease infinite",
-      }}
-    >
+    <>
       <Nav />
+      <div className="hidden lg:block absolute right-10 top-64 ">
+        <img
+          src="/images/Bingke.png"
+          alt="Bingke"
+          width="400"
+          height="400"
+          loading="lazy"
+        />
+      </div>
+
       <Ucapan />
       <Order />
       <Footer />
-    </div>
+    </>
   );
 }

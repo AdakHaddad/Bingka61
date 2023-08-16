@@ -42,7 +42,9 @@ export default function RootLayout({ children }) {
         <meta property="og:url" content="https://bingke61.vercel.app/" />
         <meta property="og:image" content="/public/favicon.jpg" />
       </Helmet>
-      <main className="flex-grow">{children}</main>
+      <main className="flex-grow  bg-gradient-to-r from-yellow-400 via-red-500 to-pink-500">
+        {children}
+      </main>
     </div>
   );
 }
