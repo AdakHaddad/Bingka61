@@ -6,7 +6,7 @@ export default function Page() {
   return (
     <>
       <Nav />
-      <div className="hidden lg:block absolute right-10 top-64 ">
+      <div className="hidden lg:block absolute right-10 top-60 ">
         <img
           src="/images/Bingke.png"
           alt="Bingke"
