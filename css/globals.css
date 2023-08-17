@@ -33,3 +33,24 @@
   font-family: "Poppins", sans-serif;
   font-style: normal;
 }
+@keyframes bounce-custom {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-20px); /* Adjust the bounce height */
+  }
+}
+
+.animate-bounce-custom {
+  animation-name: bounce-custom;
+  animation-duration: 3s; /* Adjust the animation duration */
+  animation-timing-function: cubic-bezier(
+    -0.5,
+    0,
+    0,
+    -0.5
+  ); /* Adjust the timing function for slower bounce */
+  animation-iteration-count: infinite;
+}

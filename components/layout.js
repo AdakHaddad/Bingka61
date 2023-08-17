@@ -1,5 +1,4 @@
 import React from "react";
-import { Helmet } from "react-helmet";
 
 export const metadata = {
   title: "Bingke 61",
@@ -10,38 +9,37 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <div>
-      <Helmet>
-        <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="description" content={metadata.description} />
-        <title>{metadata.title}</title>
-        <link rel="icon" href="/favicon.ico" />
+      <meta charSet="utf-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1" />
+      <meta name="description" content={metadata.description} />
+      <title>{metadata.title}</title>
+      <link rel="icon" href="/favicon.ico" />
 
-        {/* Google verification meta tag */}
-        <meta
-          name="google-site-verification"
-          content="jp4c1QT3ewOcc0RQ0_pDKs-I8RlOAciS2CoM2eRREyg"
-        />
+      {/* Google verification meta tag */}
+      <meta
+        name="google-site-verification"
+        content="jp4c1QT3ewOcc0RQ0_pDKs-I8RlOAciS2CoM2eRREyg"
+      />
 
-        {/* Additional meta tags */}
-        <meta
-          name="keywords"
-          content="Indonesian food, Pontianak, Bingke 61, Kalimantan Barat, authentic cuisine"
-        />
-        <meta name="author" content="Bingke 61" />
-        <meta name="robots" content="index, follow" />
+      {/* Additional meta tags */}
+      <meta
+        name="keywords"
+        content="Indonesian food, Pontianak, Bingke 61, Kalimantan Barat, authentic cuisine"
+      />
+      <meta name="author" content="Bingke 61" />
+      <meta name="robots" content="index, follow" />
 
-        {/* Language settings */}
-        <meta httpEquiv="content-language" content="id" />
-        <meta name="language" content="Indonesian" />
+      {/* Language settings */}
+      <meta httpEquiv="content-language" content="id" />
+      <meta name="language" content="Indonesian" />
 
-        {/* Open Graph tags for better social media sharing */}
-        <meta property="og:title" content={metadata.title} />
-        <meta property="og:description" content={metadata.description} />
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://bingke61.vercel.app/" />
-        <meta property="og:image" content="/public/favicon.jpg" />
-      </Helmet>
+      {/* Open Graph tags for better social media sharing */}
+      <meta property="og:title" content={metadata.title} />
+      <meta property="og:description" content={metadata.description} />
+      <meta property="og:type" content="website" />
+      <meta property="og:url" content="https://bingke61.vercel.app/" />
+      <meta property="og:image" content="/public/favicon.ico" />
+
       <main className="flex-grow  bg-gradient-to-r from-yellow-400 via-red-500 to-pink-500">
         {children}
       </main>

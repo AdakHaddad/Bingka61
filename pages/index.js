@@ -6,13 +6,13 @@ export default function Page() {
   return (
     <>
       <Nav />
-      <div className="hidden lg:block absolute right-10 top-60 ">
+      <div className="hidden lg:block absolute right-10 top-60 animate-bounce-custom z-0 ">
         <img
-          src="/images/Bingke.png"
+          src="/images/Bingke.svg"
           alt="Bingke"
           width="400"
           height="400"
-          loading="lazy"
+          loading="eager"
         />
       </div>
 
