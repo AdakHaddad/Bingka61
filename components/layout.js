@@ -1,5 +1,4 @@
 import React from "react";
-import Head from "next/head";
 export const metadata = {
   title: "Bingke 61",
   description:
@@ -9,7 +8,7 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <>
-      <Head>
+      <head>
         <meta charSet="utf-8" />
 
         <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -32,7 +31,7 @@ export default function RootLayout({ children }) {
         <meta property="og:title" content={metadata.title} />
         <meta property="og:description" content={metadata.description} />
         <meta property="og:type" content="website" />
-      </Head>
+      </head>
 
       <main className="flex-grow  bg-gradient-to-r from-yellow-400 via-red-500 to-pink-500">
         {children}
