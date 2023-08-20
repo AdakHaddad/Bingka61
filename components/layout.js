@@ -3,7 +3,7 @@ import React from "react";
 export const metadata = {
   title: "Bingke 61",
   description:
-    "Experience the authentic flavors of Indonesian cuisine at Bingke 61. We offer a wide range of delicious dishes in Pontianak, Kalimantan Barat. Visit us today and indulge in the rich culinary heritage of Indonesia.",
+    "Toko kue oleh-oleh lengkap khas Pontianak serta makanan ringan. Temukan rasa yang kaya dan warisan budaya Kalimantan Barat melalui pilihan eksklusif kami dari kue oleh-oleh. Kunjungi kami hari ini dan nikmati cita rasa masakan Indonesia yang otentik. ",
 };
 
 export default function RootLayout({ children }) {
@@ -13,20 +13,13 @@ export default function RootLayout({ children }) {
       <meta name="viewport" content="width=device-width, initial-scale=1" />
       <meta name="description" content={metadata.description} />
       <title>{metadata.title}</title>
-      <link rel="icon" href="/favicon.ico" />
+      <link rel="icon" href="../public/favicon.ico" />
 
-      {/* Google verification meta tag */}
-      <meta
-        name="google-site-verification"
-        content="jp4c1QT3ewOcc0RQ0_pDKs-I8RlOAciS2CoM2eRREyg"
-      />
-
-      {/* Additional meta tags */}
       <meta
         name="keywords"
         content="Indonesian food, Pontianak, Bingke 61, Kalimantan Barat, authentic cuisine"
       />
-      <meta name="author" content="Bingke 61" />
+      <meta name="author" content="Admin" />
       <meta name="robots" content="index, follow" />
 
       {/* Language settings */}
@@ -37,8 +30,10 @@ export default function RootLayout({ children }) {
       <meta property="og:title" content={metadata.title} />
       <meta property="og:description" content={metadata.description} />
       <meta property="og:type" content="website" />
-      <meta property="og:url" content="https://bingke61.vercel.app/" />
-      <meta property="og:image" content="/public/favicon.ico" />
+      <meta
+        property="og:image"
+        content="https://bingke61.vercel.app/public/favicon.ico"
+      />
 
       <main className="flex-grow  bg-gradient-to-r from-yellow-400 via-red-500 to-pink-500">
         {children}
