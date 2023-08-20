@@ -1,5 +1,5 @@
 import React from "react";
-
+import Head from "next/head";
 export const metadata = {
   title: "Bingke 61",
   description:
@@ -8,36 +8,39 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <div>
-      <meta charSet="utf-8" />
-      <meta name="viewport" content="width=device-width, initial-scale=1" />
-      <meta name="description" content={metadata.description} />
-      <title>{metadata.title}</title>
-      <link rel="icon" href="../public/favicon.ico" />
+    <>
+      <Head>
+        <meta charSet="utf-8" />
 
-      <meta
-        name="keywords"
-        content="Indonesian food, Pontianak, Bingke 61, Kalimantan Barat, authentic cuisine"
-      />
-      <meta name="author" content="Admin" />
-      <meta name="robots" content="index, follow" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="description" content={metadata.description} />
+        <title>Bingke 61</title>
+        <link rel="icon" href="../public/favicon.ico" />
 
-      {/* Language settings */}
-      <meta httpEquiv="content-language" content="id" />
-      <meta name="language" content="Indonesian" />
+        <meta
+          name="keywords"
+          content="Indonesian food, Pontianak, Bingke 61, Kalimantan Barat, authentic cuisine"
+        />
+        <meta name="author" content="Admin" />
+        <meta name="robots" content="index, follow" />
 
-      {/* Open Graph tags for better social media sharing */}
-      <meta property="og:title" content={metadata.title} />
-      <meta property="og:description" content={metadata.description} />
-      <meta property="og:type" content="website" />
-      <meta
-        property="og:image"
-        content="https://bingke61.vercel.app/public/favicon.ico"
-      />
+        {/* Language settings */}
+        <meta httpEquiv="content-language" content="id" />
+        <meta name="language" content="Indonesian" />
+
+        {/* Open Graph tags for better social media sharing */}
+        <meta property="og:title" content={metadata.title} />
+        <meta property="og:description" content={metadata.description} />
+        <meta property="og:type" content="website" />
+        <meta
+          property="og:image"
+          content="https://bingke61.vercel.app/public/favicon.ico"
+        />
+      </Head>
 
       <main className="flex-grow  bg-gradient-to-r from-yellow-400 via-red-500 to-pink-500">
         {children}
       </main>
-    </div>
+    </>
   );
 }
