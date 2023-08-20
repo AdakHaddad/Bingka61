@@ -5,6 +5,7 @@ import Footer from "@/components/footer";
 export default function Page() {
   return (
     <>
+      <title>Bingke 61</title>
       <Nav />
       <div className="hidden lg:block absolute right-10 top-60 animate-bounce-custom z-0 ">
         <img
@@ -15,7 +16,6 @@ export default function Page() {
           loading="eager"
         />
       </div>
-
       <Ucapan />
       <Order />
       <Footer />
