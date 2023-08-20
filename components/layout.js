@@ -32,10 +32,6 @@ export default function RootLayout({ children }) {
         <meta property="og:title" content={metadata.title} />
         <meta property="og:description" content={metadata.description} />
         <meta property="og:type" content="website" />
-        <meta
-          property="og:image"
-          content="https://bingke61.vercel.app/public/favicon.ico"
-        />
       </Head>
 
       <main className="flex-grow  bg-gradient-to-r from-yellow-400 via-red-500 to-pink-500">
