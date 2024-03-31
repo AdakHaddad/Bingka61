@@ -8,7 +8,13 @@ const MENU_ITEMS = [
   { name: "Kentang", price: 24000 },
   { name: "Ubi", price: 24000 },
   { name: "Daging", price: 24000 },
-  { name: "Pandan", price: 22000 },
+  { name: "Pandan", price: 24000 },
+  { name: "Blodar", price: 15000 },
+  { name: "Rempah Rendang", price: 15000 },
+  { name: "Rempah Kari", price: 15000 },
+  { name: "Rempah Semur", price: 15000 },
+  { name: "Tar Susu ", price: 40000 },
+  { name: "Nasi Kebuli", price: 120000 }
 ];
 
 export default function Order() {
