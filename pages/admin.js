@@ -98,20 +98,21 @@ export default function Admin() {
         ))}
       </div>
       <div className="flex flex-col mt-4">
-        <div className="flex flex-wrap justify-center">
+        <div className="flex flex-wrap justify-center -mx-2">
           {CASH_VALUES.map((value, index) => (
             <button
               key={index}
               onClick={() => handleCashButtonClick(value)}
               style={{ backgroundColor: value.color }}
-              className={`text-white py-2 rounded mb-2 mx-2 sm:mx-0 w-full ${
-                value.value === 100000 ? "sm:w-auto" : "w-24"
+              className={`text-white py-2 rounded mb-2 mx-2 sm:mx-0 ${
+                value.value === 100000 ? "w-full" : "w-24"
               }`}
             >
               {new Intl.NumberFormat("id-ID").format(value.value)}
             </button>
           ))}
         </div>
+
         <div className="flex items-center">
           <input
             type="number"
@@ -132,7 +133,7 @@ export default function Admin() {
       </div>
       {returnAmount > 0 && (
         <div className="mt-4">
-          <p className="font-bold">Balek:</p>
+          <p className="font-bold">Kembali:</p>
           <p className="text-center font-black text-xl">{returnAmount}</p>
         </div>
       )}
