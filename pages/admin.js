@@ -1,19 +1,20 @@
 import React, { useState, useEffect } from "react";
 
 const MENU_ITEMS = [
-  { name: "Original", price: 22000 },
+  { name: "Original", price: 23000 },
   { name: "Blodar", price: 15000 },
-  { name: "Berendam", price: 24000 },
-  { name: "Tar Susu", price: 40000 },
-  { name: "Keju", price: 24000 },
-  { name: " Rendang", price: 15000 },
-  { name: "Kentang", price: 24000 },
-  { name: " Kari", price: 15000 },
-  { name: "Ubi", price: 24000 },
-  { name: " Semur", price: 15000 },
-  { name: "Daging", price: 24000 },
-  { name: "Nasi Kebuli", price: 120000 },
-  { name: "Pandan", price: 24000 },
+  { name: "Berendam", price: 25000 },
+  { name: "Tar Susu", price: 45000 },
+  { name: "Keju", price: 25000 },
+  { name: "Rendang", price: 17000 },
+  { name: "Kentang", price: 25000 },
+  { name: "Kari", price: 17000 },
+  { name: "Ubi", price: 25000 },
+  { name: "Semur", price: 17000 },
+  { name: "Daging", price: 30000 },
+  { name: "Nasi Kebuli", price: 150000 },
+  { name: "Pandan", price: 25000 },
+  { name: "Durian", price: 30000 },
 ];
 
 const CASH_VALUES = [
