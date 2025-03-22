@@ -72,25 +72,16 @@ export default function Admin() {
             key={index}
             onClick={() => handleMenuItemClick(item)}
             className={` py-4 rounded active:bg-opacity-60 ${
-              item.name === "Blodar" ||
-              item.name === "Tar Susu" ||
-              item.name === "Berendam" ||
-              item.name === "Original" ||
-              item.name === "Keju" ||
-              item.name === "Kentang" ||
-              item.name === "Ubi" ||
-              item.name === "Daging" ||
-              item.name === "Pandan"
-                ? "bg-yellow-400"
-                : item.name === "Nasi Kebuli"
+              
+                item.name === "Nasi Kebuli"
                 ? "bg-slate-300 text-black" // White for Nasi Kebuli
-                : item.name === " Rendang"
+                : item.name === "Rendang"
                 ? "bg-red-600 text-white"
-                : item.name === " Kari"
+                : item.name === "Kari"
                 ? "bg-orange-500 text-white"
-                : item.name === " Semur"
+                : item.name === "Semur"
                 ? "bg-orange-800 text-white"
-                : "" // No additional class for other items
+                : "bg-yellow-400" // Default items
             }`}
           >
             {item.name} - {item.price} x{" "}
