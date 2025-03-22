@@ -84,11 +84,11 @@ export default function Admin() {
                 : item.name === "Nasi Kebuli"
                 ? "bg-slate-300 text-black" // White for Nasi Kebuli
                 : item.name === " Rendang"
-                ? "bg-red-600"
+                ? "bg-red-600 text-white"
                 : item.name === " Kari"
-                ? "bg-orange-500"
+                ? "bg-orange-500 text-white"
                 : item.name === " Semur"
-                ? "bg-orange-800"
+                ? "bg-orange-800 text-white"
                 : "" // No additional class for other items
             }`}
           >
