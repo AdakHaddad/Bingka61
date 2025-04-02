@@ -1,5 +1,5 @@
 import "../css/globals.css";
-import RootLayout from "@/components/layout.js";
+import RootLayout from "../components/layout.js";
 import { Analytics } from "@vercel/analytics/react";
 
 export default function MyApp({ Component, pageProps }) {
