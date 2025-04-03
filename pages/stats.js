@@ -404,10 +404,6 @@ export default function StatsPage() {
                   labelFormatter={(date) =>
                     format(new Date(date), "dd MMMM yyyy", { locale: id })
                   }
-                  formatter={(value, name) => [
-                    value,
-                    name === "transactions" ? "Orders" : "Items",
-                  ]}
                 />
                 <Legend />
                 <Bar dataKey="transactions" fill="#8884d8" name="Orders" />
