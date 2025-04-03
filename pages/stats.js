@@ -221,13 +221,10 @@ export default function StatsPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8 text-center">
-        Bingka61 Sales Analytics
-      </h1>
-
+    
       {/* Date range filter */}
       <div className="mb-8 bg-white p-4 rounded-lg shadow">
-        <h2 className="text-xl font-semibold mb-4">Filter by Date Range</h2>
+        <h2 className="text-xl font-semibold mb-4">Date Range</h2>
         <div className="flex flex-wrap gap-2 mb-4">
           <button
             onClick={() => setDateRange("today")}
