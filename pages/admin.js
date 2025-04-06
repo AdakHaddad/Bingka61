@@ -153,7 +153,7 @@ export default function Admin() {
 
   return (
     <div className="container mx-auto p-2">
-      <div className="grid grid-cols-2 gap-1 text-sm">
+      <div className="grid grid-cols-2 gap-1 text-sm font-medium">
         {MENU_ITEMS.map((item, index) => (
           <button
             key={index}
@@ -182,12 +182,33 @@ export default function Admin() {
             <button
               key={index}
               onClick={() => handleCashButtonClick(value)}
-              style={{ backgroundColor: value.color }}
-              className={`text-white py-2 rounded mb-2 mx-2 sm:mx-0 ${
-                value.value === 100000 ? "w-full" : "w-24"
-              }`}
+              className={`text-black font-medium py-2 rounded mb-2 mx-2 sm:mx-0 flex items-center justify-center `}
+              style={{
+                backgroundImage: `url(/images/${
+                  value.value === 1000
+                    ? "1k.png"
+                    : value.value === 2000
+                    ? "2k.png"
+                    : value.value === 5000
+                    ? "5k.png"
+                    : value.value === 10000
+                    ? "10k.png"
+                    : value.value === 20000
+                    ? "20k.png"
+                    : value.value === 50000
+                    ? "50k.png"
+                    : value.value === 100000
+                    ? "100k.png"
+                    : ""
+                })`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                height: value.value == "45px",
+              }}
             >
-              {new Intl.NumberFormat("id-ID").format(value.value)}
+              <span className="bg-white bg-opacity-20 px-2 py-1 rounded">
+                {new Intl.NumberFormat("id-ID").format(value.value)}
+              </span>
             </button>
           ))}
         </div>
@@ -198,6 +219,7 @@ export default function Admin() {
             id="cash"
             value={cash}
             onChange={(e) => setCash(parseFloat(e.target.value) || 0)}
+            step="1000"
             className="border flex border-gray-300 max-w-screen-md rounded px-3 py-2 mr-2"
             style={{ width: "50%", maxWidth: "200px" }}
           />
@@ -211,12 +233,18 @@ export default function Admin() {
         </div>
       </div>
 
-      {returnAmount >= 0 && totalAmount > 0 && (
-        <div className="mt-4 text-center">
-          <p className="font-bold">
+      <hr className="my-2 border-t-2 border-gray-300" />
+
+      {items.length > 0 && (
+        <div className="mt-4 text-center text-white">
+          <p className="font-bold text-lg">
             Total: Rp. {new Intl.NumberFormat("id-ID").format(totalAmount)}
           </p>
-          <p className="font-bold">
+        </div>
+      )}
+      {returnAmount > 0 && totalAmount > 0 && (
+        <div className="text-center text-green-300">
+          <p className="font-bold text-lg">
             Kembali: Rp. {new Intl.NumberFormat("id-ID").format(returnAmount)}
           </p>
 
@@ -252,7 +280,7 @@ export default function Admin() {
       )}
 
       {items.length > 0 && (
-        <div className="mt-4">
+        <div className="mt-4 bg-white p-3 rounded shadow">
           <p className="font-bold">Pesanan:</p>
           <ul>
             {items.map((item, index) => (
