@@ -40,7 +40,7 @@ export default function Order() {
     const message = `Pesanan saya:\n\n${Object.keys(orders)
       .map((key) => `${key}: ${orders[key]}`)
       .join("\n")}\n\nTotal: Rp${totalPrice.toLocaleString()}`;
-    const url = `https://wa.me/6285933059045?text=${encodeURIComponent(
+    const url = `https://wa.me/6289512777961?text=${encodeURIComponent(
       message
     )}`;
     window.open(url, "_blank");
