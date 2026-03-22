@@ -58,7 +58,7 @@ export default function Nav() {
         />
         <SocialMediaButton
           icon={faWhatsapp}
-          link="https://wa.me/6285933059045"
+          link="https://wa.me/6289512777961"
           label="WhatsApp"
         />
       </div>
