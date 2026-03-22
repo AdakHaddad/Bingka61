@@ -137,7 +137,7 @@ function generateESCPOSCommands(data) {
 
   // Items
   for (const item of data.items) {
-    const name = item.name.padEnd(10).substring(0, 10);
+    const name = item.name.substring(0, 9).padEnd(9);
     const qty = item.quantity.toString().padStart(3);
     const price = formatNumber(item.price).padStart(8);
     const subtotal = formatNumber(item.price * item.quantity).padStart(9);
@@ -151,32 +151,15 @@ function generateESCPOSCommands(data) {
   // Totals - bold
   commands.push(Buffer.from([0x1b, 0x45, 0x01])); // Bold on
 
-  const totalText = "Total: ";
-  const totalValue = "Rp. " + formatNumber(data.totalAmount);
-  const totalPadding = 32 - (totalText.length + totalValue.length);
-  commands.push(
-    Buffer.from(
-      totalText + " ".repeat(Math.max(0, totalPadding)) + totalValue + "\n"
-    )
-  );
+  const formatTotalLine = (label, value) => {
+    const formattedValue = "Rp. " + formatNumber(value);
+    const padding = 32 - (label.length + formattedValue.length);
+    return label + " ".repeat(Math.max(0, padding)) + formattedValue + "\n";
+  };
 
-  const cashText = "Tunai: ";
-  const cashValue = "Rp. " + formatNumber(data.cashReceived);
-  const cashPadding = 32 - (cashText.length + cashValue.length);
-  commands.push(
-    Buffer.from(
-      cashText + " ".repeat(Math.max(0, cashPadding)) + cashValue + "\n"
-    )
-  );
-
-  const changeText = "Kembali: ";
-  const changeValue = "Rp. " + formatNumber(data.changeAmount);
-  const changePadding = 32 - (changeText.length + changeValue.length);
-  commands.push(
-    Buffer.from(
-      changeText + " ".repeat(Math.max(0, changePadding)) + changeValue + "\n"
-    )
-  );
+  commands.push(Buffer.from(formatTotalLine("Total:", data.totalAmount)));
+  commands.push(Buffer.from(formatTotalLine("Tunai:", data.cashReceived)));
+  commands.push(Buffer.from(formatTotalLine("Kembali:", data.changeAmount)));
 
   commands.push(Buffer.from([0x1b, 0x45, 0x00])); // Bold off
 
