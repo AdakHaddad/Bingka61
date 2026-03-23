@@ -18,6 +18,10 @@ const MenuSchema = new mongoose.Schema({
     type: String,
     default: "bg-yellow-400",
   },
+  order: {
+    type: Number,
+    default: 0,
+  },
   isActive: {
     type: Boolean,
     default: true,

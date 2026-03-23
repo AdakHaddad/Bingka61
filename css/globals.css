@@ -43,14 +43,15 @@
   }
 }
 
-.animate-bounce-custom {
-  animation-name: bounce-custom;
-  animation-duration: 3s; /* Adjust the animation duration */
-  animation-timing-function: cubic-bezier(
-    -0.5,
-    0,
-    0,
-    -0.5
-  ); /* Adjust the timing function for slower bounce */
-  animation-iteration-count: infinite;
+@keyframes wiggle {
+  0% { transform: rotate(-0.5deg); }
+  25% { transform: rotate(0.5deg); }
+  50% { transform: rotate(-0.5deg); }
+  75% { transform: rotate(0.5deg); }
+  100% { transform: rotate(-0.5deg); }
+}
+
+.wiggle {
+  display: inline-block;
+  animation: wiggle 1.5s infinite;
 }

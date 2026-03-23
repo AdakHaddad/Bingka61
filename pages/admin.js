@@ -1,5 +1,22 @@
 import React, { useState, useEffect, useRef } from "react";
 import { format } from "date-fns"; // Make sure to import this as it's used in your invoice template
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { 
+  faGear, 
+  faStore, 
+  faPrint, 
+  faPlus,
+  faMinus,
+  faTrash,
+  faArrowLeft,
+  faRotateRight,
+  faMoneyBillWave,
+  faArrowUp,
+  faArrowDown,
+  faPencil,
+  faXmark
+} from "@fortawesome/free-solid-svg-icons";
+import { faBluetooth } from "@fortawesome/free-brands-svg-icons";
 
 const INITIAL_MENU_ITEMS = [
   { name: "Original", price: 23000 },
@@ -31,7 +48,14 @@ const CASH_VALUES = [
 export default function Admin() {
   const [menuItems, setMenuItems] = useState([]);
   const [isFromDB, setIsFromDB] = useState(false); // Track if data is from DB
-  const [view, setView] = useState("pos"); // 'pos' or 'menu'
+  const [isEditing, setIsEditing] = useState(false); // New editing mode state
+  const [settings, setSettings] = useState({
+    storeName: "BINGKA61",
+    storeAddress: "Jl. KHW HASYIM No. 152",
+    storePhone: "+62 859-3305-9045",
+    footerGreeting1: "Terima Kasih",
+    footerGreeting2: "Atas Kunjungan Anda",
+  });
   const [items, setItems] = useState([]);
   const [cash, setCash] = useState(0);
   const [returnAmount, setReturnAmount] = useState(0);
@@ -43,12 +67,16 @@ export default function Admin() {
   const [printerCharacteristic, setPrinterCharacteristic] = useState(null);
   const invoiceRef = useRef(null);
 
+  // Drag and Drop State
+  const [draggedIndex, setDraggedIndex] = useState(null);
+
   // New Menu Management States
   const [editingItem, setEditingItem] = useState(null);
   const [newMenuItem, setNewMenuItem] = useState({ name: "", price: 0 });
 
   useEffect(() => {
     fetchMenu();
+    fetchSettings();
   }, []);
 
   const fetchMenu = async () => {
@@ -66,6 +94,38 @@ export default function Admin() {
       console.error("Error fetching menu:", error);
       setMenuItems(INITIAL_MENU_ITEMS);
       setIsFromDB(false);
+    }
+  };
+
+  const fetchSettings = async () => {
+    try {
+      const res = await fetch("/api/settings");
+      const data = await res.json();
+      if (data.success) {
+        setSettings(data.data);
+      }
+    } catch (error) {
+      console.error("Error fetching settings:", error);
+    }
+  };
+
+  const handleSaveSettings = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(settings),
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert("Pengaturan struk berhasil disimpan!");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Gagal menyimpan pengaturan");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -130,6 +190,42 @@ export default function Admin() {
     }
   };
 
+  // Drag and Drop Handlers
+  const onDragStart = (e, index) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const onDragOver = (e, index) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === index) return;
+
+    const newMenuItems = [...menuItems];
+    const draggedItem = newMenuItems[draggedIndex];
+    newMenuItems.splice(draggedIndex, 1);
+    newMenuItems.splice(index, 0, draggedItem);
+    
+    setDraggedIndex(index);
+    setMenuItems(newMenuItems);
+  };
+
+  const onDragEnd = async () => {
+    setDraggedIndex(null);
+    const updates = menuItems.map((item, idx) => ({
+      id: item._id,
+      order: idx,
+    }));
+    try {
+      await fetch("/api/menu", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      });
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   const handleSaveInitialMenu = async () => {
     if (!confirm("Simpan semua menu awal ke database?")) return;
     setLoading(true);
@@ -184,10 +280,10 @@ export default function Admin() {
     
     // Header
     commands.push(new Uint8Array([0x1b, 0x45, 0x01])); // Bold On
-    commands.push(encoder.encode("BINGKA61\n"));
+    commands.push(encoder.encode(`${settings.storeName}\n`));
     commands.push(new Uint8Array([0x1b, 0x45, 0x00])); // Bold Off
-    commands.push(encoder.encode("Jl. KHW HASYIM No. 152\n"));
-    commands.push(encoder.encode("Telp: +62 859-3305-9045\n"));
+    commands.push(encoder.encode(`${settings.storeAddress}\n`));
+    commands.push(encoder.encode(`Telp: ${settings.storePhone}\n`));
     commands.push(encoder.encode("--------------------------------\n"));
 
     // Info
@@ -463,308 +559,298 @@ export default function Admin() {
         <h1 className="text-xl font-bold text-white">Bingka61 POS</h1>
         <div className="flex space-x-2">
           <button
-            onClick={() => setView(view === "pos" ? "menu" : "pos")}
-            className="px-4 py-2 rounded bg-orange-600 text-white text-sm hover:bg-orange-700"
+            onClick={() => setIsEditing(!isEditing)}
+            className={`p-2 rounded transition-colors ${
+              isEditing ? "bg-green-600 shadow-inner" : "bg-orange-600 hover:bg-orange-700"
+            } text-white`}
+            title={isEditing ? "Selesai Edit" : "Pengaturan Menu"}
           >
-            {view === "pos" ? "Pengaturan Menu" : "Kembali ke POS"}
+            <FontAwesomeIcon icon={isEditing ? faStore : faGear} className={isEditing ? "" : ""} />
           </button>
           <button
             onClick={connectBluetooth}
-            className={`px-4 py-2 rounded text-white text-sm ${
+            className={`p-2 rounded text-white transition-colors ${
               printerCharacteristic ? "bg-green-600" : "bg-blue-600 hover:bg-blue-700"
             }`}
+            title={printerCharacteristic ? "Printer Terhubung" : "Hubungkan Printer Bluetooth"}
           >
-            {printerCharacteristic ? "Printer Terhubung" : "Hubungkan Printer Bluetooth"}
+            <FontAwesomeIcon icon={printerCharacteristic ? faPrint : faBluetooth} />
           </button>
         </div>
       </div>
 
-      {view === "pos" ? (
-        <>
-          <div className="grid grid-cols-2 gap-1 text-sm font-medium">
-            {menuItems.map((item, index) => (
-              <button
-                key={index}
-                onClick={() => handleMenuItemClick(item)}
-                className={` py-4 rounded active:bg-opacity-60 ${
-                  item.name === "Nasi Kebuli"
-                    ? "bg-slate-300 text-black"
-                    : item.name === "Rendang"
-                    ? "bg-red-600 text-white"
-                    : item.name === "Kari"
-                    ? "bg-orange-500 text-white"
-                    : item.name === "Semur"
-                    ? "bg-orange-800 text-white"
-                    : item.displayColor || "bg-yellow-400"
-                }`}
-              >
-                {item.name} - {item.price} x{" "}
-                {items.find((i) => i.name === item.name)?.quantity || 0}
-              </button>
-            ))}
+      {isEditing && (
+        <div className="mb-4 bg-white p-3 rounded shadow animate-in fade-in slide-in-from-top duration-300">
+          <h3 className="text-sm font-bold mb-2">Tambah Menu Baru</h3>
+          <div className="flex space-x-2">
+            <input
+              type="text"
+              placeholder="Nama"
+              value={newMenuItem.name}
+              onChange={(e) => setNewMenuItem({...newMenuItem, name: e.target.value})}
+              className="border p-2 rounded text-sm flex-1"
+            />
+            <input
+              type="number"
+              placeholder="Harga"
+              value={newMenuItem.price}
+              onChange={(e) => setNewMenuItem({...newMenuItem, price: parseInt(e.target.value) || 0})}
+              className="border p-2 rounded text-sm w-24"
+            />
+            <button
+              onClick={handleAddMenu}
+              disabled={loading}
+              className="bg-green-600 text-white px-4 py-2 rounded text-sm font-bold"
+            >
+              +
+            </button>
           </div>
+          
+          {!isFromDB && (
+            <button
+              onClick={handleSaveInitialMenu}
+              className="mt-3 w-full bg-blue-600 text-white p-2 rounded text-xs font-bold hover:bg-blue-700 transition-colors flex items-center justify-center"
+            >
+              <FontAwesomeIcon icon={faMoneyBillWave} className="mr-2" />
+              Simpan Menu ke Database
+            </button>
+          )}
+        </div>
+      )}
 
-          <div className="flex flex-col mt-4">
-            <div className="flex flex-wrap justify-center -mx-2">
-              {CASH_VALUES.map((value, index) => (
+      <div className="grid grid-cols-2 gap-1 text-sm font-medium">
+        {menuItems.map((item, index) => (
+          <div
+            key={item._id || item.name}
+            draggable={isEditing}
+            onDragStart={(e) => onDragStart(e, index)}
+            onDragOver={(e) => onDragOver(e, index)}
+            onDragEnd={onDragEnd}
+            className={`relative group ${isEditing ? "wiggle" : ""}`}
+          >
+            <button
+              onClick={() => !isEditing && handleMenuItemClick(item)}
+              className={`w-full py-4 rounded active:bg-opacity-60 transition-all ${
+                item.name === "Nasi Kebuli"
+                  ? "bg-slate-300 text-black"
+                  : item.name === "Rendang"
+                  ? "bg-red-600 text-white"
+                  : item.name === "Kari"
+                  ? "bg-orange-500 text-white"
+                  : item.name === "Semur"
+                  ? "bg-orange-800 text-white"
+                  : item.displayColor || "bg-yellow-400"
+              } ${isEditing ? "cursor-move ring-2 ring-blue-400 ring-inset" : ""}`}
+            >
+              {item.name} - {item.price} x{" "}
+              {items.find((i) => i.name === item.name)?.quantity || 0}
+            </button>
+
+            {isEditing && (
+              <div className="absolute inset-0 flex items-center justify-center space-x-4 bg-black bg-opacity-10 rounded">
                 <button
-                  key={index}
-                  onClick={() => handleCashButtonClick(value)}
-                  className={`text-black font-medium py-2 rounded mb-2 mx-2 sm:mx-0 flex items-center justify-center `}
-                  style={{
-                    backgroundImage: `url(/images/${
-                      value.value === 1000
-                        ? "1k.png"
-                        : value.value === 2000
-                        ? "2k.png"
-                        : value.value === 5000
-                        ? "5k.png"
-                        : value.value === 10000
-                        ? "10k.png"
-                        : value.value === 20000
-                        ? "20k.png"
-                        : value.value === 50000
-                        ? "50k.png"
-                        : value.value === 100000
-                        ? "100k.png"
-                        : ""
-                    })`,
-                    backgroundSize: "cover",
-                    backgroundPosition: "center",
-                    height: value.value == "45px",
+                  onClick={() => {
+                    const newName = prompt("Nama Menu:", item.name);
+                    const newPrice = prompt("Harga Menu:", item.price);
+                    if (newName && newPrice) {
+                      handleUpdateMenu({ ...item, name: newName, price: parseInt(newPrice) });
+                    }
                   }}
+                  className="bg-blue-500 text-white w-8 h-8 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-600 transition-transform hover:scale-110"
                 >
-                  <span className="bg-white bg-opacity-20 px-2 py-1 rounded">
-                    {new Intl.NumberFormat("id-ID").format(value.value)}
-                  </span>
-                </button>
-              ))}
-            </div>
-
-            {printerCharacteristic && (
-              <div className="flex space-x-2 mb-4">
-                <button
-                  onClick={testPrint}
-                  className="bg-gray-600 text-white px-3 py-1 rounded text-xs hover:bg-gray-700"
-                >
-                  Test Print
+                  <FontAwesomeIcon icon={faPencil} size="xs" />
                 </button>
                 <button
-                  onClick={openDrawer}
-                  className="bg-gray-600 text-white px-3 py-1 rounded text-xs hover:bg-gray-700"
+                  onClick={() => handleDeleteMenu(item._id)}
+                  className="bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition-transform hover:scale-110"
                 >
-                  Buka Laci
+                  <FontAwesomeIcon icon={faXmark} size="xs" />
                 </button>
               </div>
             )}
-
-            <div className="flex items-center">
-              <input
-                type="number"
-                id="cash"
-                value={cash}
-                onChange={(e) => setCash(parseFloat(e.target.value) || 0)}
-                step="1000"
-                className="border flex border-gray-300 max-w-screen-md rounded px-3 py-2 mr-2"
-                style={{ width: "50%", maxWidth: "200px" }}
-              />
-              <button
-                onClick={handleReset}
-                className="bg-red-500 flex-auto text-white text-center py-2 px-3 rounded hover:bg-red-600"
-                style={{ width: "50%", minWidth: "100px" }}
-              >
-                Reset
-              </button>
-              <button
-                onClick={handlePrintLast}
-                disabled={!invoice}
-                className={`ml-2 flex-auto text-white text-center py-2 px-3 rounded ${
-                  !invoice
-                    ? "bg-gray-400 cursor-not-allowed"
-                    : "bg-blue-500 hover:bg-blue-600"
-                }`}
-                style={{ width: "50%", minWidth: "120px" }}
-              >
-                Cetak Ulang
-              </button>
-            </div>
           </div>
+        ))}
+      </div>
 
-          <hr className="my-2 border-t-2 border-gray-300" />
+      <div className="flex flex-col mt-4">
+        <div className="flex flex-wrap justify-center -mx-2">
+          {CASH_VALUES.map((value, index) => (
+            <button
+              key={index}
+              onClick={() => handleCashButtonClick(value)}
+              className={`text-black font-medium py-2 rounded mb-2 mx-2 sm:mx-0 flex items-center justify-center `}
+              style={{
+                backgroundImage: `url(/images/${
+                  value.value === 1000
+                    ? "1k.png"
+                    : value.value === 2000
+                    ? "2k.png"
+                    : value.value === 5000
+                    ? "5k.png"
+                    : value.value === 10000
+                    ? "10k.png"
+                    : value.value === 20000
+                    ? "20k.png"
+                    : value.value === 50000
+                    ? "50k.png"
+                    : value.value === 100000
+                    ? "100k.png"
+                    : ""
+                })`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                height: "45px",
+                width: "45px"
+              }}
+            >
+              <span className="bg-white bg-opacity-20 px-2 py-1 rounded text-[10px]">
+                {new Intl.NumberFormat("id-ID").format(value.value)}
+              </span>
+            </button>
+          ))}
+        </div>
 
-          {items.length > 0 && (
-            <div className="mt-4 text-center text-white">
-              <p className="font-bold text-lg">
-                Total: Rp. {new Intl.NumberFormat("id-ID").format(totalAmount)}
-              </p>
+        {printerCharacteristic && (
+          <div className="flex space-x-2 mb-4">
+            <button
+              onClick={testPrint}
+              className="bg-gray-600 text-white px-3 py-1 rounded text-xs hover:bg-gray-700"
+            >
+              Test Print
+            </button>
+            <button
+              onClick={openDrawer}
+              className="bg-gray-600 text-white px-3 py-1 rounded text-xs hover:bg-gray-700"
+            >
+              Buka Laci
+            </button>
+          </div>
+        )}
+
+        <div className="flex items-center">
+          <input
+            type="number"
+            id="cash"
+            value={cash}
+            onChange={(e) => setCash(parseFloat(e.target.value) || 0)}
+            step="1000"
+            className="border flex border-gray-300 max-w-screen-md rounded px-3 py-2 mr-2"
+            style={{ width: "50%", maxWidth: "200px" }}
+          />
+          <button
+            onClick={handleReset}
+            className="bg-red-500 flex-auto text-white text-center py-2 px-3 rounded hover:bg-red-600 transition-colors"
+            style={{ width: "50%", minWidth: "100px" }}
+            title="Reset Pesanan"
+          >
+            <FontAwesomeIcon icon={faRotateRight} className="mr-2" />
+            Reset
+          </button>
+          <button
+            onClick={handlePrintLast}
+            disabled={!invoice}
+            className={`ml-2 flex-auto text-white text-center py-2 px-3 rounded transition-colors ${
+              !invoice
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-blue-500 hover:bg-blue-600"
+            }`}
+            style={{ width: "50%", minWidth: "120px" }}
+            title="Cetak Ulang Transaksi Terakhir"
+          >
+            <FontAwesomeIcon icon={faPrint} className="mr-2" />
+            Cetak Ulang
+          </button>
+        </div>
+      </div>
+
+      <hr className="my-2 border-t-2 border-gray-300" />
+
+      {items.length > 0 && (
+        <div className="mt-4 text-center text-white">
+          <p className="font-bold text-lg">
+            Total: Rp. {new Intl.NumberFormat("id-ID").format(totalAmount)}
+          </p>
+        </div>
+      )}
+      {returnAmount >= 0 && totalAmount > 0 && (
+        <div className="text-center text-green-300">
+          <p className="font-bold text-lg">
+            Kembali: Rp.{" "}
+            {new Intl.NumberFormat("id-ID").format(returnAmount)}
+          </p>
+
+          <button
+            onClick={saveTransaction}
+            disabled={loading || items.length === 0 || returnAmount < 0}
+            className={`mt-2 w-full py-2 px-4 rounded ${
+              loading || items.length === 0 || returnAmount < 0
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-green-600 hover:bg-green-700 text-white"
+            }`}
+          >
+            {loading ? "Memproses..." : "Cetak Struk"}
+          </button>
+
+          {printStatus && (
+            <div
+              className={`mt-2 text-sm ${
+                printStatus === "sending"
+                  ? "text-blue-500"
+                  : printStatus === "success"
+                  ? "text-green-500"
+                  : "text-red-500"
+              }`}
+            >
+              {printStatus === "sending" && "Mengirim ke printer..."}
+              {printStatus === "success" && "Struk berhasil dicetak!"}
+              {printStatus === "error" && "Gagal mencetak struk. Coba lagi."}
             </div>
           )}
-          {returnAmount > 0 && totalAmount > 0 && (
-            <div className="text-center text-green-300">
-              <p className="font-bold text-lg">
-                Kembali: Rp.{" "}
-                {new Intl.NumberFormat("id-ID").format(returnAmount)}
-              </p>
+        </div>
+      )}
 
-              <button
-                onClick={saveTransaction}
-                disabled={loading || items.length === 0 || returnAmount < 0}
-                className={`mt-2 w-full py-2 px-4 rounded ${
-                  loading || items.length === 0 || returnAmount < 0
-                    ? "bg-gray-400 cursor-not-allowed"
-                    : "bg-green-600 hover:bg-green-700 text-white"
-                }`}
+      {items.length > 0 && (
+        <div className="mt-4 bg-white p-3 rounded shadow">
+          <p className="font-bold mb-2">Pesanan:</p>
+          <ul className="space-y-2">
+            {items.map((item, index) => (
+              <li
+                key={index}
+                className="flex justify-between items-center text-sm border-b pb-1"
               >
-                {loading ? "Memproses..." : "Cetak Struk"}
-              </button>
-
-              {/* Print status indicator */}
-              {printStatus && (
-                <div
-                  className={`mt-2 text-sm ${
-                    printStatus === "sending"
-                      ? "text-blue-500"
-                      : printStatus === "success"
-                      ? "text-green-500"
-                      : "text-red-500"
-                  }`}
-                >
-                  {printStatus === "sending" && "Mengirim ke printer..."}
-                  {printStatus === "success" && "Struk berhasil dicetak!"}
-                  {printStatus === "error" && "Gagal mencetak struk. Coba lagi."}
+                <div className="flex-1">
+                  <span className="font-medium">{item.name}</span>
+                  <div className="text-xs text-gray-500">
+                    Rp. {new Intl.NumberFormat("id-ID").format(item.price)}{" "}
+                    x {item.quantity}
+                  </div>
                 </div>
-              )}
-            </div>
-          )}
-
-          {items.length > 0 && (
-            <div className="mt-4 bg-white p-3 rounded shadow">
-              <p className="font-bold mb-2">Pesanan:</p>
-              <ul className="space-y-2">
-                {items.map((item, index) => (
-                  <li
-                    key={index}
-                    className="flex justify-between items-center text-sm border-b pb-1"
+                <div className="flex items-center space-x-1">
+                  <button
+                    onClick={() => handleDecrementItem(item.name)}
+                    className="bg-yellow-500 text-white px-2 py-1 rounded text-xs hover:bg-yellow-600 transition-colors"
+                    title="Kurangi"
                   >
-                    <div className="flex-1">
-                      <span className="font-medium">{item.name}</span>
-                      <div className="text-xs text-gray-500">
-                        Rp. {new Intl.NumberFormat("id-ID").format(item.price)}{" "}
-                        x {item.quantity}
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <button
-                        onClick={() => handleDecrementItem(item.name)}
-                        className="bg-yellow-500 text-white px-2 py-1 rounded text-xs"
-                      >
-                        -
-                      </button>
-                      <button
-                        onClick={() => handleMenuItemClick(item)}
-                        className="bg-green-500 text-white px-2 py-1 rounded text-xs"
-                      >
-                        +
-                      </button>
-                      <button
-                        onClick={() => handleRemoveItem(item.name)}
-                        className="bg-red-600 text-white px-2 py-1 rounded text-xs ml-2"
-                      >
-                        Hapus
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </>
-      ) : (
-        <div className="bg-white p-4 rounded shadow">
-          <h2 className="text-lg font-bold mb-4">Pengaturan Menu</h2>
-          
-          {/* Add New Item */}
-          <div className="mb-6 p-3 border rounded bg-gray-50">
-            <h3 className="text-sm font-bold mb-2">Tambah Menu Baru</h3>
-            <div className="flex flex-col space-y-2">
-              <input
-                type="text"
-                placeholder="Nama Menu"
-                value={newMenuItem.name}
-                onChange={(e) => setNewMenuItem({...newMenuItem, name: e.target.value})}
-                className="border p-2 rounded text-sm"
-              />
-              <input
-                type="number"
-                placeholder="Harga"
-                value={newMenuItem.price}
-                onChange={(e) => setNewMenuItem({...newMenuItem, price: parseInt(e.target.value) || 0})}
-                className="border p-2 rounded text-sm"
-              />
-              <button
-                onClick={handleAddMenu}
-                disabled={loading}
-                className="bg-green-600 text-white p-2 rounded text-sm font-bold"
-              >
-                {loading ? "Menambahkan..." : "Tambah Menu"}
-              </button>
-            </div>
-          </div>
-
-          {/* Menu List */}
-          <div className="space-y-3">
-            {menuItems.map((item) => (
-              <div key={item._id || item.name} className="border-b pb-2">
-                {editingItem && editingItem._id === item._id ? (
-                  <div className="flex flex-col space-y-2">
-                    <input
-                      type="text"
-                      value={editingItem.name}
-                      onChange={(e) => setEditingItem({...editingItem, name: e.target.value})}
-                      className="border p-1 rounded text-sm"
-                    />
-                    <input
-                      type="number"
-                      value={editingItem.price}
-                      onChange={(e) => setEditingItem({...editingItem, price: parseInt(e.target.value) || 0})}
-                      className="border p-1 rounded text-sm"
-                    />
-                    <div className="flex space-x-2">
-                      <button onClick={() => handleUpdateMenu(editingItem)} className="text-green-600 text-xs font-bold">Simpan</button>
-                      <button onClick={() => setEditingItem(null)} className="text-gray-500 text-xs">Batal</button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="font-medium">{item.name}</p>
-                      <p className="text-xs text-gray-500">Rp. {new Intl.NumberFormat("id-ID").format(item.price)}</p>
-                    </div>
-                    <div className="flex space-x-3">
-                      <button onClick={() => setEditingItem(item)} className="text-blue-600 text-xs">Edit</button>
-                      <button onClick={() => handleDeleteMenu(item._id)} className="text-red-600 text-xs">Hapus</button>
-                    </div>
-                  </div>
-                )}
-              </div>
+                    <FontAwesomeIcon icon={faMinus} />
+                  </button>
+                  <button
+                    onClick={() => handleMenuItemClick(item)}
+                    className="bg-green-500 text-white px-2 py-1 rounded text-xs hover:bg-green-600 transition-colors"
+                    title="Tambah"
+                  >
+                    <FontAwesomeIcon icon={faPlus} />
+                  </button>
+                  <button
+                    onClick={() => handleRemoveItem(item.name)}
+                    className="bg-red-600 text-white px-3 py-1 rounded text-xs ml-2 hover:bg-red-700 transition-colors"
+                    title="Hapus"
+                  >
+                    <FontAwesomeIcon icon={faTrash} />
+                  </button>
+                </div>
+              </li>
             ))}
-          </div>
-
-          {/* Seed Button - Only show if not from DB */}
-          {!isFromDB && (
-            <div className="mt-8 pt-4 border-t">
-              <p className="text-xs text-gray-500 mb-2">
-                Gunakan tombol di bawah untuk menyimpan menu awal ke database.
-              </p>
-              <button
-                onClick={handleSaveInitialMenu}
-                disabled={loading}
-                className="w-full bg-blue-600 text-white p-2 rounded text-xs font-bold hover:bg-blue-700"
-              >
-                Simpan Menu Utama
-              </button>
-            </div>
-          )}
+          </ul>
         </div>
       )}
 
@@ -776,7 +862,7 @@ export default function Admin() {
           style={{
             width: "80mm",
             fontFamily: "monospace",
-            backgroundColor: "white", // Add this to ensure it's visible when printing
+            backgroundColor: "white",
           }}
         >
           <div style={{ textAlign: "center", marginBottom: "10px" }}>
