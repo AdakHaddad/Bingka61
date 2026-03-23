@@ -324,8 +324,8 @@ export default function Admin() {
 
     // Footer
     commands.push(new Uint8Array([0x1b, 0x61, 0x01]));
-    commands.push(encoder.encode("Terima Kasih\n"));
-    commands.push(encoder.encode("Atas Kunjungan Anda\n\n\n\n"));
+    commands.push(encoder.encode(`${settings.footerGreeting1}\n`));
+    commands.push(encoder.encode(`${settings.footerGreeting2}\n\n\n\n`));
     
     // Cut/Feed
     commands.push(new Uint8Array([0x1d, 0x56, 0x41, 0x10]));
@@ -615,6 +615,59 @@ export default function Admin() {
               Simpan Menu ke Database
             </button>
           )}
+
+          <div className="mt-6 pt-4 border-t border-gray-100">
+            <h3 className="text-sm font-bold mb-3 flex items-center text-gray-700">
+              <FontAwesomeIcon icon={faGear} className="mr-2 text-gray-400" />
+              Pengaturan Struk
+            </h3>
+            <div className="grid grid-cols-1 gap-2">
+              <input
+                type="text"
+                placeholder="Nama Toko"
+                value={settings.storeName}
+                onChange={(e) => setSettings({...settings, storeName: e.target.value})}
+                className="border p-2 rounded text-sm w-full"
+              />
+              <input
+                type="text"
+                placeholder="Alamat"
+                value={settings.storeAddress}
+                onChange={(e) => setSettings({...settings, storeAddress: e.target.value})}
+                className="border p-2 rounded text-sm w-full"
+              />
+              <input
+                type="text"
+                placeholder="Telepon"
+                value={settings.storePhone}
+                onChange={(e) => setSettings({...settings, storePhone: e.target.value})}
+                className="border p-2 rounded text-sm w-full"
+              />
+              <div className="flex space-x-2">
+                <input
+                  type="text"
+                  placeholder="Pesan Kaki 1"
+                  value={settings.footerGreeting1}
+                  onChange={(e) => setSettings({...settings, footerGreeting1: e.target.value})}
+                  className="border p-2 rounded text-sm flex-1"
+                />
+                <input
+                  type="text"
+                  placeholder="Pesan Kaki 2"
+                  value={settings.footerGreeting2}
+                  onChange={(e) => setSettings({...settings, footerGreeting2: e.target.value})}
+                  className="border p-2 rounded text-sm flex-1"
+                />
+              </div>
+              <button
+                onClick={handleSaveSettings}
+                disabled={loading}
+                className="mt-2 bg-blue-500 text-white p-2 rounded text-xs font-bold hover:bg-blue-600 transition-colors"
+              >
+                {loading ? "Menyimpan..." : "Simpan Pengaturan Struk"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -867,13 +920,13 @@ export default function Admin() {
         >
           <div style={{ textAlign: "center", marginBottom: "10px" }}>
             <h2 style={{ margin: "0", fontSize: "14px", fontWeight: "bold" }}>
-              BINGKA61
+              {settings.storeName}
             </h2>
             <p style={{ margin: "3px 0", fontSize: "12px" }}>
-              Jl. KHW HASYIM No. 152
+              {settings.storeAddress}
             </p>
             <p style={{ margin: "3px 0", fontSize: "12px" }}>
-              Telp: +62 859-3305-9045
+              Telp: {settings.storePhone}
             </p>
             <hr style={{ margin: "10px 0", border: "1px dashed #000" }} />
           </div>
@@ -980,8 +1033,8 @@ export default function Admin() {
                   fontSize: "12px",
                 }}
               >
-                <p style={{ margin: "3px 0" }}>Terima Kasih</p>
-                <p style={{ margin: "3px 0" }}>Atas Kunjungan Anda</p>
+                <p style={{ margin: "3px 0" }}>{settings.footerGreeting1}</p>
+                <p style={{ margin: "3px 0" }}>{settings.footerGreeting2}</p>
               </div>
             </>
           )}
