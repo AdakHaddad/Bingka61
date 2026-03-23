@@ -787,7 +787,7 @@ export default function Admin() {
                   className="mt-3 w-full bg-blue-600 text-white p-2 rounded text-xs font-bold hover:bg-blue-700 transition-colors flex items-center justify-center"
                 >
                   <FontAwesomeIcon icon={faMoneyBillWave} className="mr-2" />
-                  Simpan Menu ke Database
+                  Simpan Menu
                 </button>
               )}
             </div>
