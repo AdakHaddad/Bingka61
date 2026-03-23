@@ -14,7 +14,8 @@ import {
   faArrowUp,
   faArrowDown,
   faPencil,
-  faXmark
+  faXmark,
+  faReceipt
 } from "@fortawesome/free-solid-svg-icons";
 import { faBluetooth } from "@fortawesome/free-brands-svg-icons";
 
@@ -49,6 +50,7 @@ export default function Admin() {
   const [menuItems, setMenuItems] = useState([]);
   const [isFromDB, setIsFromDB] = useState(false); // Track if data is from DB
   const [isEditing, setIsEditing] = useState(false); // New editing mode state
+  const [view, setView] = useState("pos"); // 'pos' or 'receipt'
   const [settings, setSettings] = useState({
     storeName: "BINGKA61",
     storeAddress: "Jl. KHW HASYIM No. 152",
@@ -559,13 +561,28 @@ export default function Admin() {
         <h1 className="text-xl font-bold text-white">Bingka61 POS</h1>
         <div className="flex space-x-2">
           <button
-            onClick={() => setIsEditing(!isEditing)}
+            onClick={() => {
+              setView("pos");
+              setIsEditing(!isEditing);
+            }}
             className={`p-2 rounded transition-colors ${
               isEditing ? "bg-green-600 shadow-inner" : "bg-orange-600 hover:bg-orange-700"
             } text-white`}
             title={isEditing ? "Selesai Edit" : "Pengaturan Menu"}
           >
-            <FontAwesomeIcon icon={isEditing ? faStore : faGear} className={isEditing ? "" : ""} />
+            <FontAwesomeIcon icon={isEditing ? faStore : faGear} />
+          </button>
+          <button
+            onClick={() => {
+              setIsEditing(false);
+              setView(view === "receipt" ? "pos" : "receipt");
+            }}
+            className={`p-2 rounded transition-colors ${
+              view === "receipt" ? "bg-blue-400 shadow-inner" : "bg-blue-600 hover:bg-blue-700"
+            } text-white`}
+            title="Pengaturan Struk"
+          >
+            <FontAwesomeIcon icon={faReceipt} />
           </button>
           <button
             onClick={connectBluetooth}
@@ -579,151 +596,258 @@ export default function Admin() {
         </div>
       </div>
 
-      {isEditing && (
-        <div className="mb-4 bg-white p-3 rounded shadow animate-in fade-in slide-in-from-top duration-300">
-          <h3 className="text-sm font-bold mb-2">Tambah Menu Baru</h3>
-          <div className="flex space-x-2">
-            <input
-              type="text"
-              placeholder="Nama"
-              value={newMenuItem.name}
-              onChange={(e) => setNewMenuItem({...newMenuItem, name: e.target.value})}
-              className="border p-2 rounded text-sm flex-1"
-            />
-            <input
-              type="number"
-              placeholder="Harga"
-              value={newMenuItem.price}
-              onChange={(e) => setNewMenuItem({...newMenuItem, price: parseInt(e.target.value) || 0})}
-              className="border p-2 rounded text-sm w-24"
-            />
-            <button
-              onClick={handleAddMenu}
-              disabled={loading}
-              className="bg-green-600 text-white px-4 py-2 rounded text-sm font-bold"
+      {view === "receipt" ? (
+        <div className="bg-gray-100 p-4 rounded-lg shadow-inner min-h-[80vh] flex flex-col items-center overflow-y-auto">
+          <div className="flex justify-between w-full mb-4 items-center px-2">
+            <h2 className="font-bold text-gray-700">Receipt Designer</h2>
+            <button 
+              onClick={() => setView("pos")}
+              className="text-xs bg-gray-300 px-2 py-1 rounded"
             >
-              +
+              <FontAwesomeIcon icon={faArrowLeft} className="mr-1" /> Kembali
             </button>
           </div>
-          
-          {!isFromDB && (
-            <button
-              onClick={handleSaveInitialMenu}
-              className="mt-3 w-full bg-blue-600 text-white p-2 rounded text-xs font-bold hover:bg-blue-700 transition-colors flex items-center justify-center"
-            >
-              <FontAwesomeIcon icon={faMoneyBillWave} className="mr-2" />
-              Simpan Menu ke Database
-            </button>
-          )}
 
-          <div className="mt-6 pt-4 border-t border-gray-100">
-            <h3 className="text-sm font-bold mb-3 flex items-center text-gray-700">
-              <FontAwesomeIcon icon={faGear} className="mr-2 text-gray-400" />
-              Pengaturan Struk
-            </h3>
-            <div className="grid grid-cols-1 gap-2">
-              <input
-                type="text"
-                placeholder="Nama Toko"
-                value={settings.storeName}
-                onChange={(e) => setSettings({...settings, storeName: e.target.value})}
-                className="border p-2 rounded text-sm w-full"
-              />
-              <input
-                type="text"
-                placeholder="Alamat"
-                value={settings.storeAddress}
-                onChange={(e) => setSettings({...settings, storeAddress: e.target.value})}
-                className="border p-2 rounded text-sm w-full"
-              />
-              <input
-                type="text"
-                placeholder="Telepon"
-                value={settings.storePhone}
-                onChange={(e) => setSettings({...settings, storePhone: e.target.value})}
-                className="border p-2 rounded text-sm w-full"
-              />
-              <div className="flex space-x-2">
-                <input
-                  type="text"
-                  placeholder="Pesan Kaki 1"
-                  value={settings.footerGreeting1}
-                  onChange={(e) => setSettings({...settings, footerGreeting1: e.target.value})}
-                  className="border p-2 rounded text-sm flex-1"
-                />
-                <input
-                  type="text"
-                  placeholder="Pesan Kaki 2"
-                  value={settings.footerGreeting2}
-                  onChange={(e) => setSettings({...settings, footerGreeting2: e.target.value})}
-                  className="border p-2 rounded text-sm flex-1"
-                />
+          <div className="w-full flex flex-col md:flex-row md:space-x-6 items-start justify-center">
+            {/* 1:1 Preview */}
+            <div 
+              className="bg-white p-6 shadow-2xl mb-6 md:mb-0 border-t-4 border-blue-500"
+              style={{
+                width: "300px", // Simulated 58mm
+                fontFamily: "'Courier New', Courier, monospace",
+                minHeight: "450px"
+              }}
+            >
+              <div className="text-center mb-4">
+                <div className="font-bold text-lg mb-1">{settings.storeName}</div>
+                <div className="text-xs uppercase leading-tight mb-1">{settings.storeAddress}</div>
+                <div className="text-xs">Telp: {settings.storePhone}</div>
+                <div className="border-b border-dashed border-black my-3"></div>
               </div>
+
+              <div className="text-[10px] space-y-1 mb-3">
+                <div className="flex justify-between">
+                  <span>No: INV/2026/001</span>
+                  <span>22/03/2026 14:30</span>
+                </div>
+                <div className="border-b border-dashed border-black my-2"></div>
+              </div>
+
+              <div className="text-[10px] mb-3">
+                <div className="flex font-bold mb-1 border-b border-black border-opacity-10">
+                  <span className="w-1/2">ITEM</span>
+                  <span className="w-1/6 text-right">QTY</span>
+                  <span className="w-1/3 text-right">SUBTOTAL</span>
+                </div>
+                <div className="flex py-1">
+                  <span className="w-1/2">Original</span>
+                  <span className="w-1/6 text-right">2</span>
+                  <span className="w-1/3 text-right">46.000</span>
+                </div>
+                <div className="flex py-1">
+                  <span className="w-1/2">Keju</span>
+                  <span className="w-1/6 text-right">1</span>
+                  <span className="w-1/3 text-right">25.000</span>
+                </div>
+                <div className="border-b border-dashed border-black my-2"></div>
+              </div>
+
+              <div className="text-[10px] space-y-1 font-bold">
+                <div className="flex justify-between text-xs">
+                  <span>TOTAL</span>
+                  <span>Rp. 71.000</span>
+                </div>
+                <div className="flex justify-between opacity-70">
+                  <span>CASH</span>
+                  <span>Rp. 100.000</span>
+                </div>
+                <div className="flex justify-between opacity-70">
+                  <span>CHANGE</span>
+                  <span>Rp. 29.000</span>
+                </div>
+                <div className="border-b border-dashed border-black my-3"></div>
+              </div>
+
+              <div className="text-center text-[10px] italic space-y-1 mt-4">
+                <div>{settings.footerGreeting1}</div>
+                <div>{settings.footerGreeting2}</div>
+              </div>
+              
+              <div className="mt-8 text-center text-[8px] text-gray-300">
+                --------------------------------
+              </div>
+            </div>
+
+            {/* Editor Sidebar */}
+            <div className="flex-1 w-full max-w-md bg-white p-4 rounded-lg shadow space-y-4">
+              <h3 className="text-sm font-bold border-b pb-2 flex items-center">
+                <FontAwesomeIcon icon={faPencil} className="mr-2 text-blue-500" />
+                Customize Content
+              </h3>
+              
+              <div className="space-y-3">
+                <div>
+                  <label className="text-[10px] font-bold text-gray-500 block mb-1">STORE NAME</label>
+                  <input
+                    type="text"
+                    value={settings.storeName}
+                    onChange={(e) => setSettings({...settings, storeName: e.target.value})}
+                    className="w-full border p-2 rounded text-sm bg-gray-50"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-gray-500 block mb-1">ADDRESS</label>
+                  <textarea
+                    rows="2"
+                    value={settings.storeAddress}
+                    onChange={(e) => setSettings({...settings, storeAddress: e.target.value})}
+                    className="w-full border p-2 rounded text-sm bg-gray-50"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-gray-500 block mb-1">PHONE NUMBER</label>
+                  <input
+                    type="text"
+                    value={settings.storePhone}
+                    onChange={(e) => setSettings({...settings, storePhone: e.target.value})}
+                    className="w-full border p-2 rounded text-sm bg-gray-50"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-500 block mb-1">FOOTER LINE 1</label>
+                    <input
+                      type="text"
+                      value={settings.footerGreeting1}
+                      onChange={(e) => setSettings({...settings, footerGreeting1: e.target.value})}
+                      className="w-full border p-2 rounded text-sm bg-gray-50"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-500 block mb-1">FOOTER LINE 2</label>
+                    <input
+                      type="text"
+                      value={settings.footerGreeting2}
+                      onChange={(e) => setSettings({...settings, footerGreeting2: e.target.value})}
+                      className="w-full border p-2 rounded text-sm bg-gray-50"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <button
                 onClick={handleSaveSettings}
                 disabled={loading}
-                className="mt-2 bg-blue-500 text-white p-2 rounded text-xs font-bold hover:bg-blue-600 transition-colors"
+                className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition-all shadow-lg flex items-center justify-center space-x-2 mt-4"
               >
-                {loading ? "Menyimpan..." : "Simpan Pengaturan Struk"}
+                {loading ? (
+                  <FontAwesomeIcon icon={faRotateRight} spin />
+                ) : (
+                  <>
+                    <FontAwesomeIcon icon={faStore} />
+                    <span>SAVE RECEIPT DESIGN</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
         </div>
-      )}
-
-      <div className="grid grid-cols-2 gap-1 text-sm font-medium">
-        {menuItems.map((item, index) => (
-          <div
-            key={item._id || item.name}
-            draggable={isEditing}
-            onDragStart={(e) => onDragStart(e, index)}
-            onDragOver={(e) => onDragOver(e, index)}
-            onDragEnd={onDragEnd}
-            className={`relative group ${isEditing ? "wiggle" : ""}`}
-          >
-            <button
-              onClick={() => !isEditing && handleMenuItemClick(item)}
-              className={`w-full py-4 rounded active:bg-opacity-60 transition-all ${
-                item.name === "Nasi Kebuli"
-                  ? "bg-slate-300 text-black"
-                  : item.name === "Rendang"
-                  ? "bg-red-600 text-white"
-                  : item.name === "Kari"
-                  ? "bg-orange-500 text-white"
-                  : item.name === "Semur"
-                  ? "bg-orange-800 text-white"
-                  : item.displayColor || "bg-yellow-400"
-              } ${isEditing ? "cursor-move ring-2 ring-blue-400 ring-inset" : ""}`}
-            >
-              {item.name} - {item.price} x{" "}
-              {items.find((i) => i.name === item.name)?.quantity || 0}
-            </button>
-
-            {isEditing && (
-              <div className="absolute inset-0 flex items-center justify-center space-x-4 bg-black bg-opacity-10 rounded">
+      ) : (
+        <>
+          {isEditing && (
+            <div className="mb-4 bg-white p-3 rounded shadow animate-in fade-in slide-in-from-top duration-300">
+              <h3 className="text-sm font-bold mb-2">Tambah Menu Baru</h3>
+              <div className="flex space-x-2">
+                <input
+                  type="text"
+                  placeholder="Nama"
+                  value={newMenuItem.name}
+                  onChange={(e) => setNewMenuItem({...newMenuItem, name: e.target.value})}
+                  className="border p-2 rounded text-sm flex-1"
+                />
+                <input
+                  type="number"
+                  placeholder="Harga"
+                  value={newMenuItem.price}
+                  onChange={(e) => setNewMenuItem({...newMenuItem, price: parseInt(e.target.value) || 0})}
+                  className="border p-2 rounded text-sm w-24"
+                />
                 <button
-                  onClick={() => {
-                    const newName = prompt("Nama Menu:", item.name);
-                    const newPrice = prompt("Harga Menu:", item.price);
-                    if (newName && newPrice) {
-                      handleUpdateMenu({ ...item, name: newName, price: parseInt(newPrice) });
-                    }
-                  }}
-                  className="bg-blue-500 text-white w-8 h-8 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-600 transition-transform hover:scale-110"
+                  onClick={handleAddMenu}
+                  disabled={loading}
+                  className="bg-green-600 text-white px-4 py-2 rounded text-sm font-bold"
                 >
-                  <FontAwesomeIcon icon={faPencil} size="xs" />
-                </button>
-                <button
-                  onClick={() => handleDeleteMenu(item._id)}
-                  className="bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition-transform hover:scale-110"
-                >
-                  <FontAwesomeIcon icon={faXmark} size="xs" />
+                  +
                 </button>
               </div>
-            )}
+              
+              {!isFromDB && (
+                <button
+                  onClick={handleSaveInitialMenu}
+                  className="mt-3 w-full bg-blue-600 text-white p-2 rounded text-xs font-bold hover:bg-blue-700 transition-colors flex items-center justify-center"
+                >
+                  <FontAwesomeIcon icon={faMoneyBillWave} className="mr-2" />
+                  Simpan Menu ke Database
+                </button>
+              )}
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-1 text-sm font-medium">
+            {menuItems.map((item, index) => (
+              <div
+                key={item._id || item.name}
+                draggable={isEditing}
+                onDragStart={(e) => onDragStart(e, index)}
+                onDragOver={(e) => onDragOver(e, index)}
+                onDragEnd={onDragEnd}
+                className={`relative group ${isEditing ? "wiggle" : ""}`}
+              >
+                <button
+                  onClick={() => !isEditing && handleMenuItemClick(item)}
+                  className={`w-full py-4 rounded active:bg-opacity-60 transition-all ${
+                    item.name === "Nasi Kebuli"
+                      ? "bg-slate-300 text-black"
+                      : item.name === "Rendang"
+                      ? "bg-red-600 text-white"
+                      : item.name === "Kari"
+                      ? "bg-orange-500 text-white"
+                      : item.name === "Semur"
+                      ? "bg-orange-800 text-white"
+                      : item.displayColor || "bg-yellow-400"
+                  } ${isEditing ? "cursor-move ring-2 ring-blue-400 ring-inset" : ""}`}
+                >
+                  {item.name} - {item.price} x{" "}
+                  {items.find((i) => i.name === item.name)?.quantity || 0}
+                </button>
+
+                {isEditing && (
+                  <div className="absolute inset-0 flex items-center justify-center space-x-4 bg-black bg-opacity-10 rounded">
+                    <button
+                      onClick={() => {
+                        const newName = prompt("Nama Menu:", item.name);
+                        const newPrice = prompt("Harga Menu:", item.price);
+                        if (newName && newPrice) {
+                          handleUpdateMenu({ ...item, name: newName, price: parseInt(newPrice) });
+                        }
+                      }}
+                      className="bg-blue-500 text-white w-8 h-8 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-600 transition-transform hover:scale-110"
+                    >
+                      <FontAwesomeIcon icon={faPencil} size="xs" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteMenu(item._id)}
+                      className="bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition-transform hover:scale-110"
+                    >
+                      <FontAwesomeIcon icon={faXmark} size="xs" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </>
+      )}
 
       <div className="flex flex-col mt-4">
         <div className="flex flex-wrap justify-center -mx-2">
