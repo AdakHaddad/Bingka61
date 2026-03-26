@@ -5,7 +5,11 @@ import { formatISO } from "date-fns";
 export default async function handler(req, res) {
   const { method } = req;
 
-  await dbConnect();
+  try {
+    await dbConnect();
+  } catch (error) {
+    return res.status(500).json({ success: false, error: "Database connection failed: " + error.message });
+  }
 
   switch (method) {
     case "GET":
