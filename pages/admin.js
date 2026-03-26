@@ -50,6 +50,7 @@ export default function Admin() {
   const [menuItems, setMenuItems] = useState([]);
   const [isFromDB, setIsFromDB] = useState(false); // Track if data is from DB
   const [isEditing, setIsEditing] = useState(false); // New editing mode state
+  const [isOnline, setIsOnline] = useState(true); // Track online status
   const [view, setView] = useState("pos"); // 'pos' or 'receipt'
   const [settings, setSettings] = useState({
     storeName: "BINGKA61",
@@ -79,6 +80,18 @@ export default function Admin() {
   useEffect(() => {
     fetchMenu();
     fetchSettings();
+
+    // Online/Offline Listeners
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    setIsOnline(navigator.onLine);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
   }, []);
 
   const fetchMenu = async () => {
@@ -507,6 +520,11 @@ export default function Admin() {
   };
 
   const saveTransaction = async () => {
+    if (!isOnline) {
+      alert("Anda sedang OFFLINE. Hubungkan internet untuk menyimpan transaksi ke database.");
+      return;
+    }
+
     if (items.length === 0 || returnAmount < 0) {
       alert(
         "Tidak dapat menyimpan transaksi. Pastikan ada item dan uang cukup."
@@ -558,7 +576,15 @@ export default function Admin() {
   return (
     <div className="container mx-auto p-2">
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-xl font-bold text-white">Bingka61 POS</h1>
+        <div className="flex items-center space-x-2">
+          <h1 className="text-xl font-bold text-white">Bingka61 POS</h1>
+          {!isOnline && (
+            <span className="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full animate-pulse flex items-center">
+              <span className="w-1.5 h-1.5 bg-white rounded-full mr-1"></span>
+              OFFLINE
+            </span>
+          )}
+        </div>
         <div className="flex space-x-2">
           <button
             onClick={() => {
@@ -737,15 +763,17 @@ export default function Admin() {
 
               <button
                 onClick={handleSaveSettings}
-                disabled={loading}
-                className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition-all shadow-lg flex items-center justify-center space-x-2 mt-4"
+                disabled={loading || !isOnline}
+                className={`w-full text-white py-3 rounded-lg font-bold transition-all shadow-lg flex items-center justify-center space-x-2 mt-4 ${
+                  !isOnline ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
+                }`}
               >
                 {loading ? (
                   <FontAwesomeIcon icon={faRotateRight} spin />
                 ) : (
                   <>
                     <FontAwesomeIcon icon={faStore} />
-                    <span>SAVE RECEIPT DESIGN</span>
+                    <span>{isOnline ? "SAVE RECEIPT DESIGN" : "OFFLINE - CANNOT SAVE"}</span>
                   </>
                 )}
               </button>
@@ -756,26 +784,32 @@ export default function Admin() {
         <>
           {isEditing && (
             <div className="mb-4 bg-white p-3 rounded shadow animate-in fade-in slide-in-from-top duration-300">
-              <h3 className="text-sm font-bold mb-2">Tambah Menu Baru</h3>
+              <h3 className="text-sm font-bold mb-2">
+                {isOnline ? "Tambah Menu Baru" : "Tambah Menu (Online Saja)"}
+              </h3>
               <div className="flex space-x-2">
                 <input
                   type="text"
                   placeholder="Nama"
+                  disabled={!isOnline}
                   value={newMenuItem.name}
                   onChange={(e) => setNewMenuItem({...newMenuItem, name: e.target.value})}
-                  className="border p-2 rounded text-sm flex-1"
+                  className="border p-2 rounded text-sm flex-1 disabled:bg-gray-100"
                 />
                 <input
                   type="number"
                   placeholder="Harga"
+                  disabled={!isOnline}
                   value={newMenuItem.price}
                   onChange={(e) => setNewMenuItem({...newMenuItem, price: parseInt(e.target.value) || 0})}
-                  className="border p-2 rounded text-sm w-24"
+                  className="border p-2 rounded text-sm w-24 disabled:bg-gray-100"
                 />
                 <button
                   onClick={handleAddMenu}
-                  disabled={loading}
-                  className="bg-green-600 text-white px-4 py-2 rounded text-sm font-bold"
+                  disabled={loading || !isOnline}
+                  className={`px-4 py-2 rounded text-sm font-bold text-white ${
+                    !isOnline ? "bg-gray-400 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"
+                  }`}
                 >
                   +
                 </button>
@@ -784,10 +818,13 @@ export default function Admin() {
               {!isFromDB && (
                 <button
                   onClick={handleSaveInitialMenu}
-                  className="mt-3 w-full bg-blue-600 text-white p-2 rounded text-xs font-bold hover:bg-blue-700 transition-colors flex items-center justify-center"
+                  disabled={!isOnline}
+                  className={`mt-3 w-full p-2 rounded text-xs font-bold transition-colors flex items-center justify-center text-white ${
+                    !isOnline ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
+                  }`}
                 >
                   <FontAwesomeIcon icon={faMoneyBillWave} className="mr-2" />
-                  Simpan Menu
+                  {isOnline ? "Simpan Menu" : "OFFLINE - TIDAK DAPAT SIMPAN"}
                 </button>
               )}
             </div>
@@ -821,7 +858,7 @@ export default function Admin() {
                   {items.find((i) => i.name === item.name)?.quantity || 0}
                 </button>
 
-                {isEditing && (
+                {isEditing && isOnline && (
                   <div className="absolute inset-0 flex items-center justify-center space-x-4 bg-black bg-opacity-10 rounded">
                     <button
                       onClick={() => {
