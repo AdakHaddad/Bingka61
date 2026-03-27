@@ -102,6 +102,7 @@ export default function Admin() {
   // Voice recognition refs
   const recognitionRef = useRef(null);
   const menuItemsRef = useRef(menuItems);
+  const [isVoiceMuted, setIsVoiceMuted] = useState(false);
 
   useEffect(() => {
     fetchMenu();
@@ -130,7 +131,7 @@ export default function Admin() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return;
 
-    if (view !== "pos" || isEditing) {
+    if (view !== "pos" || isEditing || isVoiceMuted) {
       if (recognitionRef.current) {
         recognitionRef.current.abort();
         recognitionRef.current = null;
@@ -138,17 +139,17 @@ export default function Admin() {
       return;
     }
 
+    let active = true;
     const recognition = new SpeechRecognition();
     recognition.lang = "id-ID";
     recognition.continuous = true;
     recognition.interimResults = false;
-    recognition.maxAlternatives = 3;
+    recognition.maxAlternatives = 1;
 
     recognition.onresult = (event) => {
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        if (event.results[i].isFinal) {
-          processVoiceCommand(event.results[i][0].transcript);
-        }
+      const last = event.results[event.results.length - 1];
+      if (last.isFinal) {
+        processVoiceCommand(last[0].transcript);
       }
     };
 
@@ -159,9 +160,12 @@ export default function Admin() {
     };
 
     recognition.onend = () => {
-      // Auto-restart to keep listening
-      if (recognitionRef.current) {
-        try { recognitionRef.current.start(); } catch (e) {}
+      if (active) {
+        setTimeout(() => {
+          if (active && recognitionRef.current) {
+            try { recognitionRef.current.start(); } catch (e) {}
+          }
+        }, 100);
       }
     };
 
@@ -169,13 +173,12 @@ export default function Admin() {
     try { recognition.start(); } catch (e) {}
 
     return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.abort();
-        recognitionRef.current = null;
-      }
+      active = false;
+      recognition.abort();
+      recognitionRef.current = null;
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view, isEditing]);
+  }, [view, isEditing, isVoiceMuted]);
 
   const fetchMenu = async () => {
     try {
@@ -493,66 +496,91 @@ export default function Admin() {
   };
 
   // Voice command helpers
-  const findMatchingMenuItem = (spokenText) => {
-    const normalized = spokenText.toLowerCase().trim();
-    let quantity = 1;
-    let textWithoutNumber = normalized;
-
-    for (const [word, num] of Object.entries(INDONESIAN_NUMBERS)) {
-      const regex = new RegExp(`\\b${word}\\b`, "i");
-      if (regex.test(normalized)) {
-        quantity = num;
-        textWithoutNumber = normalized.replace(regex, "").trim();
-        break;
-      }
-    }
-    const digitMatch = textWithoutNumber.match(/\b(\d+)\b/);
-    if (digitMatch) {
-      quantity = parseInt(digitMatch[1], 10) || 1;
-      textWithoutNumber = textWithoutNumber.replace(/\b\d+\b/, "").trim();
-    }
-
+  const matchSingleItem = (text) => {
     const menu = menuItemsRef.current;
-    if (!menu.length || !textWithoutNumber) return null;
-
-    // Exact match
+    if (!menu.length || !text) return null;
+    // Exact
     for (const item of menu) {
-      if (textWithoutNumber === item.name.toLowerCase()) return { item, quantity };
+      if (text === item.name.toLowerCase()) return item;
     }
-    // Substring match
+    // Fuzzy
     let bestMatch = null, bestScore = Infinity;
     for (const item of menu) {
       const name = item.name.toLowerCase();
-      if (textWithoutNumber.includes(name) || name.includes(textWithoutNumber)) {
-        const score = Math.abs(textWithoutNumber.length - name.length);
-        if (score < bestScore) { bestScore = score; bestMatch = item; }
-      }
-    }
-    if (bestMatch && bestScore <= 5) return { item: bestMatch, quantity };
-
-    // Fuzzy match
-    bestMatch = null; bestScore = Infinity;
-    for (const item of menu) {
-      const name = item.name.toLowerCase();
-      const dist = levenshteinDistance(textWithoutNumber, name);
+      const dist = levenshteinDistance(text, name);
       const threshold = Math.max(1, Math.floor(name.length * 0.35));
       if (dist < bestScore && dist <= threshold) { bestScore = dist; bestMatch = item; }
     }
-    return bestMatch ? { item: bestMatch, quantity } : null;
+    return bestMatch;
   };
 
   const processVoiceCommand = (spokenText) => {
-    const result = findMatchingMenuItem(spokenText);
-    if (!result) return;
-    const { item, quantity } = result;
-    setItems((prev) => {
-      const idx = prev.findIndex((i) => i.name === item.name);
-      if (idx !== -1) {
-        const updated = [...prev];
-        updated[idx] = { ...updated[idx], quantity: updated[idx].quantity + quantity };
-        return updated;
+    const menu = menuItemsRef.current;
+    if (!menu.length) return;
+
+    const normalized = spokenText.toLowerCase().trim();
+    const words = normalized.split(/\s+/);
+    const matched = [];
+    let i = 0;
+
+    while (i < words.length) {
+      const word = words[i];
+
+      // Skip number words/digits (they attach to the next or previous item)
+      if (INDONESIAN_NUMBERS[word] || /^\d+$/.test(word)) {
+        i++;
+        continue;
       }
-      return [...prev, { ...item, quantity }];
+
+      // Try two-word match first (e.g. "tar susu", "nasi kebuli")
+      let item = null;
+      if (i + 1 < words.length) {
+        const twoWord = word + " " + words[i + 1];
+        item = matchSingleItem(twoWord);
+        if (item) {
+          // Check for quantity before or after
+          const prevWord = i > 0 ? words[i - 1] : null;
+          const nextWord = i + 2 < words.length ? words[i + 2] : null;
+          const qty = INDONESIAN_NUMBERS[prevWord] || INDONESIAN_NUMBERS[nextWord] ||
+            (prevWord && /^\d+$/.test(prevWord) ? parseInt(prevWord) : null) ||
+            (nextWord && /^\d+$/.test(nextWord) ? parseInt(nextWord) : null) || 1;
+          matched.push({ item, quantity: qty });
+          i += 2;
+          if (nextWord && (INDONESIAN_NUMBERS[nextWord] || /^\d+$/.test(nextWord))) i++;
+          continue;
+        }
+      }
+
+      // Single word match
+      item = matchSingleItem(word);
+      if (item) {
+        const prevWord = i > 0 ? words[i - 1] : null;
+        const nextWord = i + 1 < words.length ? words[i + 1] : null;
+        const qty = INDONESIAN_NUMBERS[prevWord] || INDONESIAN_NUMBERS[nextWord] ||
+          (prevWord && /^\d+$/.test(prevWord) ? parseInt(prevWord) : null) ||
+          (nextWord && /^\d+$/.test(nextWord) ? parseInt(nextWord) : null) || 1;
+        matched.push({ item, quantity: qty });
+        i++;
+        if (nextWord && (INDONESIAN_NUMBERS[nextWord] || /^\d+$/.test(nextWord))) i++;
+        continue;
+      }
+
+      i++;
+    }
+
+    if (!matched.length) return;
+
+    setItems((prev) => {
+      let updated = [...prev];
+      for (const { item, quantity } of matched) {
+        const idx = updated.findIndex((i) => i.name === item.name);
+        if (idx !== -1) {
+          updated[idx] = { ...updated[idx], quantity: updated[idx].quantity + quantity };
+        } else {
+          updated.push({ ...item, quantity });
+        }
+      }
+      return updated;
     });
   };
 
@@ -765,6 +793,15 @@ export default function Admin() {
             title={printerCharacteristic ? "Printer Terhubung" : "Hubungkan Printer Bluetooth"}
           >
             <FontAwesomeIcon icon={printerCharacteristic ? faPrint : faBluetooth} />
+          </button>
+          <button
+            onClick={() => setIsVoiceMuted(!isVoiceMuted)}
+            className={`p-2 rounded text-white transition-colors ${
+              isVoiceMuted ? "bg-red-500" : "bg-green-600"
+            }`}
+            title={isVoiceMuted ? "Suara: Mati" : "Suara: Aktif"}
+          >
+            <FontAwesomeIcon icon={isVoiceMuted ? faMicrophoneSlash : faMicrophone} />
           </button>
         </div>
       </div>
