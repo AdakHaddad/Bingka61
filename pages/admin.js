@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import { format } from "date-fns"; // Make sure to import this as it's used in your invoice template
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { 
-  faGear, 
-  faStore, 
-  faPrint, 
+import {
+  faGear,
+  faStore,
+  faPrint,
   faPlus,
   faMinus,
   faTrash,
@@ -15,7 +15,9 @@ import {
   faArrowDown,
   faPencil,
   faXmark,
-  faReceipt
+  faReceipt,
+  faMicrophone,
+  faMicrophoneSlash
 } from "@fortawesome/free-solid-svg-icons";
 import { faBluetooth } from "@fortawesome/free-brands-svg-icons";
 
@@ -45,6 +47,26 @@ const CASH_VALUES = [
   { value: 50000, color: "#7FAECF" }, // 50,000
   { value: 100000, color: "#BE6375" }, // 100,000
 ];
+
+const INDONESIAN_NUMBERS = {
+  satu: 1, dua: 2, tiga: 3, empat: 4, lima: 5,
+  enam: 6, tujuh: 7, delapan: 8, sembilan: 9, sepuluh: 10,
+};
+
+const levenshteinDistance = (a, b) => {
+  const matrix = Array.from({ length: a.length + 1 }, (_, i) =>
+    Array.from({ length: b.length + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0))
+  );
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      matrix[i][j] =
+        a[i - 1] === b[j - 1]
+          ? matrix[i - 1][j - 1]
+          : 1 + Math.min(matrix[i - 1][j], matrix[i][j - 1], matrix[i - 1][j - 1]);
+    }
+  }
+  return matrix[a.length][b.length];
+};
 
 export default function Admin() {
   const [menuItems, setMenuItems] = useState([]);
@@ -77,6 +99,10 @@ export default function Admin() {
   const [editingItem, setEditingItem] = useState(null);
   const [newMenuItem, setNewMenuItem] = useState({ name: "", price: 0 });
 
+  // Voice recognition refs
+  const recognitionRef = useRef(null);
+  const menuItemsRef = useRef(menuItems);
+
   useEffect(() => {
     fetchMenu();
     fetchSettings();
@@ -93,6 +119,63 @@ export default function Admin() {
       window.removeEventListener("offline", handleOffline);
     };
   }, []);
+
+  // Keep menuItemsRef in sync
+  useEffect(() => {
+    menuItemsRef.current = menuItems;
+  }, [menuItems]);
+
+  // Voice recognition — auto-start in POS mode
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+
+    if (view !== "pos" || isEditing) {
+      if (recognitionRef.current) {
+        recognitionRef.current.abort();
+        recognitionRef.current = null;
+      }
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "id-ID";
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 3;
+
+    recognition.onresult = (event) => {
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          processVoiceCommand(event.results[i][0].transcript);
+        }
+      }
+    };
+
+    recognition.onerror = (event) => {
+      if (event.error !== "no-speech" && event.error !== "aborted") {
+        console.warn("Voice:", event.error);
+      }
+    };
+
+    recognition.onend = () => {
+      // Auto-restart to keep listening
+      if (recognitionRef.current) {
+        try { recognitionRef.current.start(); } catch (e) {}
+      }
+    };
+
+    recognitionRef.current = recognition;
+    try { recognition.start(); } catch (e) {}
+
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.abort();
+        recognitionRef.current = null;
+      }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, isEditing]);
 
   const fetchMenu = async () => {
     try {
@@ -407,6 +490,70 @@ export default function Admin() {
     } else {
       setItems([...items, { ...menuItem, quantity: 1 }]);
     }
+  };
+
+  // Voice command helpers
+  const findMatchingMenuItem = (spokenText) => {
+    const normalized = spokenText.toLowerCase().trim();
+    let quantity = 1;
+    let textWithoutNumber = normalized;
+
+    for (const [word, num] of Object.entries(INDONESIAN_NUMBERS)) {
+      const regex = new RegExp(`\\b${word}\\b`, "i");
+      if (regex.test(normalized)) {
+        quantity = num;
+        textWithoutNumber = normalized.replace(regex, "").trim();
+        break;
+      }
+    }
+    const digitMatch = textWithoutNumber.match(/\b(\d+)\b/);
+    if (digitMatch) {
+      quantity = parseInt(digitMatch[1], 10) || 1;
+      textWithoutNumber = textWithoutNumber.replace(/\b\d+\b/, "").trim();
+    }
+
+    const menu = menuItemsRef.current;
+    if (!menu.length || !textWithoutNumber) return null;
+
+    // Exact match
+    for (const item of menu) {
+      if (textWithoutNumber === item.name.toLowerCase()) return { item, quantity };
+    }
+    // Substring match
+    let bestMatch = null, bestScore = Infinity;
+    for (const item of menu) {
+      const name = item.name.toLowerCase();
+      if (textWithoutNumber.includes(name) || name.includes(textWithoutNumber)) {
+        const score = Math.abs(textWithoutNumber.length - name.length);
+        if (score < bestScore) { bestScore = score; bestMatch = item; }
+      }
+    }
+    if (bestMatch && bestScore <= 5) return { item: bestMatch, quantity };
+
+    // Fuzzy match
+    bestMatch = null; bestScore = Infinity;
+    for (const item of menu) {
+      const name = item.name.toLowerCase();
+      const dist = levenshteinDistance(textWithoutNumber, name);
+      const threshold = Math.max(1, Math.floor(name.length * 0.35));
+      if (dist < bestScore && dist <= threshold) { bestScore = dist; bestMatch = item; }
+    }
+    return bestMatch ? { item: bestMatch, quantity } : null;
+  };
+
+  const processVoiceCommand = (spokenText) => {
+    const result = findMatchingMenuItem(spokenText);
+    if (!result) return;
+    const { item, quantity } = result;
+    setItems((prev) => {
+      const idx = prev.findIndex((i) => i.name === item.name);
+      if (idx !== -1) {
+        const updated = [...prev];
+        updated[idx] = { ...updated[idx], quantity: updated[idx].quantity + quantity };
+        return updated;
+      }
+      return [...prev, { ...item, quantity }];
+    });
   };
 
   const handleDecrementItem = (menuItemName) => {
