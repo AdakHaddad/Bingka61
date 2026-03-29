@@ -6,12 +6,11 @@ export default function Page() {
   return (
     <>
       <Nav />
-      <div className="hidden lg:block absolute right-10 top-60 animate-bounce-custom z-0 ">
+      <div className="flex justify-center lg:absolute lg:right-10 lg:top-60 animate-bounce-custom z-0 mt-10 lg:mt-0">
         <img
           src="/images/Bingke.svg"
           alt="Bingke"
-          width="400"
-          height="400"
+          className="w-48 h-48 lg:w-[400px] lg:h-[400px]"
           loading="eager"
         />
       </div>

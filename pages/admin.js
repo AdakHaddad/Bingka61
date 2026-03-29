@@ -17,9 +17,11 @@ import {
   faXmark,
   faReceipt,
   faMicrophone,
-  faMicrophoneSlash
+  faMicrophoneSlash,
+  faChartSimple
 } from "@fortawesome/free-solid-svg-icons";
 import { faBluetooth } from "@fortawesome/free-brands-svg-icons";
+import Link from "next/link";
 
 const INITIAL_MENU_ITEMS = [
   { name: "Original", price: 23000 },
@@ -751,14 +753,21 @@ export default function Admin() {
   return (
     <div className="container mx-auto p-2">
       <div className="flex justify-between items-center mb-4">
-        <div className="flex items-center space-x-2">
-          <h1 className="text-xl font-bold text-white">Bingka61 POS</h1>
-          {!isOnline && (
-            <span className="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full animate-pulse flex items-center">
-              <span className="w-1.5 h-1.5 bg-white rounded-full mr-1"></span>
-              OFFLINE
-            </span>
-          )}
+        <div className="flex items-center space-x-3">
+          <img
+            src="/images/Bingke.svg"
+            alt="Logo"
+            className="w-10 h-10"
+          />
+          <div className="flex flex-col">
+            <h1 className="text-xl font-bold text-white leading-none">Bingka61 POS</h1>
+            {!isOnline && (
+              <span className="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full animate-pulse flex items-center mt-1 w-fit">
+                <span className="w-1.5 h-1.5 bg-white rounded-full mr-1"></span>
+                OFFLINE
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex space-x-2">
           <button
@@ -803,6 +812,14 @@ export default function Admin() {
           >
             <FontAwesomeIcon icon={isVoiceMuted ? faMicrophoneSlash : faMicrophone} />
           </button>
+          <Link href="/stats">
+            <button
+              className="p-2 rounded text-white bg-purple-600 hover:bg-purple-700 transition-colors"
+              title="Statistik Penjualan"
+            >
+              <FontAwesomeIcon icon={faChartSimple} />
+            </button>
+          </Link>
         </div>
       </div>
 

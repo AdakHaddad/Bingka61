@@ -29,15 +29,20 @@ export default function Nav() {
 
   return (
     <nav
-      className={`bg-black bg-opacity-5 backdrop-filter backdrop-blur-xl py-4 px-6 flex items-center justify-between sticky top-0 z-10 ${
+      className={`bg-black bg-opacity-5 backdrop-filter backdrop-blur-xl py-4 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-10 ${
         isNavbarVisible ? "opacity-100" : "opacity-0"
       } transition-opacity duration-500`}
     >
-      <a href="#" className="text-white font-bold text-xl">
-        Bingke 61
+      <a href="#" className="flex items-center space-x-2 text-white font-bold text-xl">
+        <img
+          src="/images/Bingke.svg"
+          alt="Logo"
+          className="w-8 h-8"
+        />
+        <span className="hidden xs:inline">Bingke 61</span>
       </a>
-      <div className="flex space-x-4">
-        <div>
+      <div className="flex space-x-4 items-center">
+        <div className="flex items-center">
           <SocialMediaButton
             icon={faBlogger}
             link="https://bingka61.blogspot.com"
@@ -45,7 +50,7 @@ export default function Nav() {
           />
           <a
             href="https://bingka61.blogspot.com"
-            className="text-white font-bold text-l ml-1"
+            className="text-white font-bold text-l ml-1 hidden sm:inline"
           >
             Blog
           </a>

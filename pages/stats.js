@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   BarChart,
   Bar,
@@ -13,6 +14,8 @@ import {
   ResponsiveContainer,
   LineChart,
   Line,
+  AreaChart,
+  Area,
 } from "recharts";
 import {
   format,
@@ -21,8 +24,13 @@ import {
   startOfDay,
   endOfDay,
   differenceInDays,
+  isSameDay,
+  startOfToday,
+  startOfYesterday,
 } from "date-fns";
 import { id } from "date-fns/locale";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faArrowLeft, faChartLine, faBagShopping, faMoneyBillTrendUp, faClock } from "@fortawesome/free-solid-svg-icons";
 
 export default function StatsPage() {
   const [transactions, setTransactions] = useState([]);
@@ -92,6 +100,30 @@ export default function StatsPage() {
       return transactionDate >= start && transactionDate <= end;
     });
   }, [transactions, dateRange, startDate, endDate]);
+
+  // Comparative metrics (Today vs Yesterday)
+  const statsComparison = React.useMemo(() => {
+    const today = startOfToday();
+    const yesterday = startOfYesterday();
+
+    const todayTrans = transactions.filter(t => isSameDay(new Date(t.timestamp), today));
+    const yesterdayTrans = transactions.filter(t => isSameDay(new Date(t.timestamp), yesterday));
+
+    const todayRevenue = todayTrans.reduce((sum, t) => sum + t.totalAmount, 0);
+    const yesterdayRevenue = yesterdayTrans.reduce((sum, t) => sum + t.totalAmount, 0);
+
+    const revenueDiff = todayRevenue - yesterdayRevenue;
+    const revenuePercent = yesterdayRevenue > 0 ? (revenueDiff / yesterdayRevenue) * 100 : 0;
+
+    return {
+      todayRevenue,
+      yesterdayRevenue,
+      revenueDiff,
+      revenuePercent,
+      todayCount: todayTrans.length,
+      yesterdayCount: yesterdayTrans.length
+    };
+  }, [transactions]);
 
   // Calculate total revenue
   const totalRevenue = filteredTransactions.reduce(
@@ -191,6 +223,23 @@ export default function StatsPage() {
     return Object.values(dayMap).sort((a, b) => a.date.localeCompare(b.date));
   }, [filteredTransactions, dateRange, startDate, endDate]);
 
+  // Busy Hours Data
+  const busyHours = React.useMemo(() => {
+    const hourMap = Array.from({ length: 24 }, (_, i) => ({
+      hour: `${i.toString().padStart(2, '0')}:00`,
+      count: 0,
+      revenue: 0
+    }));
+
+    filteredTransactions.forEach(t => {
+      const hour = new Date(t.timestamp).getHours();
+      hourMap[hour].count += 1;
+      hourMap[hour].revenue += t.totalAmount;
+    });
+
+    return hourMap;
+  }, [filteredTransactions]);
+
   // Colors for the charts
   const COLORS = [
     "#0088FE",
@@ -220,86 +269,71 @@ export default function StatsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 max-w-7xl">
+      
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center space-x-4">
+          <Link href="/admin">
+            <button className="p-2 rounded-full bg-white shadow hover:bg-gray-100 transition-colors">
+              <FontAwesomeIcon icon={faArrowLeft} className="w-5 h-5 text-gray-600" />
+            </button>
+          </Link>
+          <h1 className="text-3xl font-bold text-gray-800">Sales Dashboard</h1>
+        </div>
+        <div className="bg-blue-50 px-4 py-2 rounded-lg border border-blue-100">
+          <span className="text-blue-600 font-medium">
+            Today: Rp {new Intl.NumberFormat("id-ID").format(statsComparison.todayRevenue)}
+          </span>
+          <span className={`ml-3 text-xs ${statsComparison.revenueDiff >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            {statsComparison.revenueDiff >= 0 ? '↑' : '↓'} {Math.abs(statsComparison.revenuePercent).toFixed(1)}% vs yesterday
+          </span>
+        </div>
+      </div>
     
       {/* Date range filter */}
-      <div className="mb-8 bg-white p-4 rounded-lg shadow">
-        <h2 className="text-xl font-semibold mb-4">Date Range</h2>
+      <div className="mb-8 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <h2 className="text-lg font-semibold mb-4 flex items-center">
+          <FontAwesomeIcon icon={faClock} className="mr-2 text-blue-500" />
+          Filter Data
+        </h2>
         <div className="flex flex-wrap gap-2 mb-4">
-          <button
-            onClick={() => setDateRange("today")}
-            className={`px-4 py-2 rounded ${
-              dateRange === "today"
-                ? "bg-blue-600 text-white"
-                : "bg-gray-200 text-gray-800"
-            }`}
-          >
-            Today
-          </button>
-          <button
-            onClick={() => setDateRange("week")}
-            className={`px-4 py-2 rounded ${
-              dateRange === "week"
-                ? "bg-blue-600 text-white"
-                : "bg-gray-200 text-gray-800"
-            }`}
-          >
-            Last 7 Days
-          </button>
-          <button
-            onClick={() => setDateRange("month")}
-            className={`px-4 py-2 rounded ${
-              dateRange === "month"
-                ? "bg-blue-600 text-white"
-                : "bg-gray-200 text-gray-800"
-            }`}
-          >
-            Last 30 Days
-          </button>
-          <button
-            onClick={() => setDateRange("all")}
-            className={`px-4 py-2 rounded ${
-              dateRange === "all"
-                ? "bg-blue-600 text-white"
-                : "bg-gray-200 text-gray-800"
-            }`}
-          >
-            All Time
-          </button>
-          <button
-            onClick={() => setDateRange("custom")}
-            className={`px-4 py-2 rounded ${
-              dateRange === "custom"
-                ? "bg-blue-600 text-white"
-                : "bg-gray-200 text-gray-800"
-            }`}
-          >
-            Custom
-          </button>
+          {['today', 'week', 'month', 'all', 'custom'].map(range => (
+            <button
+              key={range}
+              onClick={() => setDateRange(range)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                dateRange === range
+                  ? "bg-blue-600 text-white shadow-md shadow-blue-200"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              {range.charAt(0).toUpperCase() + range.slice(1).replace('week', 'Last 7 Days').replace('month', 'Last 30 Days').replace('all', 'All Time')}
+            </button>
+          ))}
         </div>
 
         {dateRange === "custom" && (
-          <div className="flex flex-wrap gap-4">
+          <div className="flex flex-wrap gap-4 p-4 bg-gray-50 rounded-lg">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider">
                 Start Date
               </label>
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="border border-gray-300 rounded px-3 py-2"
+                className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider">
                 End Date
               </label>
               <input
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="border border-gray-300 rounded px-3 py-2"
+                className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
               />
             </div>
           </div>
@@ -308,58 +342,67 @@ export default function StatsPage() {
 
       {/* Summary metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-lg font-medium text-gray-500">Total Revenue</h2>
-          <p className="text-3xl font-bold">
-            Rp {new Intl.NumberFormat("id-ID").format(totalRevenue)}
-          </p>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-lg font-medium text-gray-500">Transactions</h2>
-          <p className="text-3xl font-bold">{filteredTransactions.length}</p>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-lg font-medium text-gray-500">Items Sold</h2>
-          <p className="text-3xl font-bold">{totalItemsSold}</p>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-lg font-medium text-gray-500">Average Order</h2>
-          <p className="text-3xl font-bold">
-            Rp {new Intl.NumberFormat("id-ID").format(averageTransactionValue)}
-          </p>
-        </div>
+        <MetricCard 
+          title="Total Revenue" 
+          value={`Rp ${new Intl.NumberFormat("id-ID").format(totalRevenue)}`}
+          icon={faMoneyBillTrendUp}
+          color="blue"
+        />
+        <MetricCard 
+          title="Transactions" 
+          value={filteredTransactions.length}
+          icon={faChartLine}
+          color="purple"
+        />
+        <MetricCard 
+          title="Items Sold" 
+          value={totalItemsSold}
+          icon={faBagShopping}
+          color="green"
+        />
+        <MetricCard 
+          title="Avg Transaction" 
+          value={`Rp ${new Intl.NumberFormat("id-ID").format(averageTransactionValue)}`}
+          icon={faChartLine}
+          color="orange"
+        />
       </div>
 
-      {/* Charts */}
+      {/* Charts Row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
         {/* Revenue by Day */}
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">Daily Revenue</h2>
-          <div style={{ width: "100%", height: 300 }}>
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+          <h2 className="text-xl font-bold mb-6 text-gray-800">Revenue Trends</h2>
+          <div style={{ width: "100%", height: 350 }}>
             <ResponsiveContainer>
-              <LineChart
-                data={salesByDay}
-                margin={{
-                  top: 5,
-                  right: 30,
-                  left: 20,
-                  bottom: 5,
-                }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
+              <AreaChart data={salesByDay}>
+                <defs>
+                  <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
                 <XAxis
                   dataKey="date"
+                  tick={{fontSize: 12}}
                   tickFormatter={(date) => format(new Date(date), "dd/MM")}
+                  axisLine={false}
+                  tickLine={false}
                 />
                 <YAxis
+                  tick={{fontSize: 12}}
                   tickFormatter={(value) =>
                     new Intl.NumberFormat("id-ID", {
                       notation: "compact",
                       compactDisplay: "short",
                     }).format(value)
                   }
+                  axisLine={false}
+                  tickLine={false}
                 />
                 <Tooltip
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                   formatter={(value) => [
                     `Rp ${new Intl.NumberFormat("id-ID").format(value)}`,
                     "Revenue",
@@ -368,46 +411,33 @@ export default function StatsPage() {
                     format(new Date(date), "dd MMMM yyyy", { locale: id })
                   }
                 />
-                <Legend />
-                <Line
+                <Area
                   type="monotone"
                   dataKey="revenue"
-                  stroke="#8884d8"
-                  activeDot={{ r: 8 }}
+                  stroke="#3b82f6"
+                  strokeWidth={3}
+                  fillOpacity={1}
+                  fill="url(#colorRev)"
                 />
-              </LineChart>
+              </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Orders by Day */}
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">Daily Transactions</h2>
-          <div style={{ width: "100%", height: 300 }}>
+        {/* Busy Hours */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+          <h2 className="text-xl font-bold mb-6 text-gray-800">Busy Hours</h2>
+          <div style={{ width: "100%", height: 350 }}>
             <ResponsiveContainer>
-              <BarChart
-                data={salesByDay}
-                margin={{
-                  top: 5,
-                  right: 30,
-                  left: 20,
-                  bottom: 5,
-                }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="date"
-                  tickFormatter={(date) => format(new Date(date), "dd/MM")}
-                />
-                <YAxis />
+              <BarChart data={busyHours}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                <XAxis dataKey="hour" tick={{fontSize: 10}} axisLine={false} tickLine={false} />
+                <YAxis axisLine={false} tickLine={false} />
                 <Tooltip
-                  labelFormatter={(date) =>
-                    format(new Date(date), "dd MMMM yyyy", { locale: id })
-                  }
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  labelFormatter={(hour) => `Time: ${hour}`}
                 />
-                <Legend />
-                <Bar dataKey="transactions" fill="#8884d8" name="Orders" />
-                <Bar dataKey="items" fill="#82ca9d" name="Items" />
+                <Bar dataKey="count" fill="#8884d8" radius={[4, 4, 0, 0]} name="Orders" />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -416,25 +446,20 @@ export default function StatsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
         {/* Top Products by Revenue */}
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">
-            Top Products by Revenue
-          </h2>
-          <div style={{ width: "100%", height: 300 }}>
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+          <h2 className="text-xl font-bold mb-6 text-gray-800">Top Products (Revenue)</h2>
+          <div style={{ width: "100%", height: 350 }}>
             <ResponsiveContainer>
               <BarChart
-                data={salesByProduct.slice(0, 10)}
+                data={salesByProduct.slice(0, 8)}
                 layout="vertical"
-                margin={{
-                  top: 5,
-                  right: 30,
-                  left: 100,
-                  bottom: 5,
-                }}
+                margin={{ left: 40 }}
               >
-                <CartesianGrid strokeDasharray="3 3" />
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
                 <XAxis
                   type="number"
+                  axisLine={false}
+                  tickLine={false}
                   tickFormatter={(value) =>
                     new Intl.NumberFormat("id-ID", {
                       notation: "compact",
@@ -442,50 +467,46 @@ export default function StatsPage() {
                     }).format(value)
                   }
                 />
-                <YAxis type="category" dataKey="name" />
+                <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 12}} />
                 <Tooltip
+                  cursor={{fill: '#f9fafb'}}
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                   formatter={(value) => [
                     `Rp ${new Intl.NumberFormat("id-ID").format(value)}`,
                     "Revenue",
                   ]}
                 />
-                <Legend />
-                <Bar dataKey="revenue" fill="#8884d8" />
+                <Bar dataKey="revenue" fill="#10b981" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Top Products by Quantity */}
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">
-            Top Products by Quantity
-          </h2>
-          <div style={{ width: "100%", height: 300 }}>
+        {/* Sales Composition */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+          <h2 className="text-xl font-bold mb-6 text-gray-800">Sales Composition</h2>
+          <div style={{ width: "100%", height: 350 }}>
             <ResponsiveContainer>
               <PieChart>
                 <Pie
-                  data={salesByProduct.slice(0, 8)}
+                  data={salesByProduct.slice(0, 6)}
                   cx="50%"
                   cy="50%"
-                  labelLine={true}
-                  outerRadius={80}
-                  fill="#8884d8"
+                  innerRadius={60}
+                  outerRadius={100}
+                  paddingAngle={5}
                   dataKey="quantity"
                   nameKey="name"
-                  label={({ name, percent }) =>
-                    `${name} ${(percent * 100).toFixed(0)}%`
-                  }
                 >
-                  {salesByProduct.slice(0, 8).map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={COLORS[index % COLORS.length]}
-                    />
+                  {salesByProduct.slice(0, 6).map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value, name, props) => [value, "Units"]} />
-                <Legend />
+                <Tooltip 
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  formatter={(value) => [`${value} units`, "Sold"]} 
+                />
+                <Legend layout="vertical" align="right" verticalAlign="middle" />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -493,63 +514,37 @@ export default function StatsPage() {
       </div>
 
       {/* Recent Transactions Table */}
-      <div className="bg-white p-6 rounded-lg shadow">
-        <h2 className="text-xl font-semibold mb-4">Recent Transactions</h2>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="p-6 border-b border-gray-50 flex justify-between items-center">
+          <h2 className="text-xl font-bold text-gray-800">Recent Transactions</h2>
+          <span className="text-sm text-gray-500">{filteredTransactions.length} results</span>
+        </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-gray-100">
+            <thead className="bg-gray-50/50">
               <tr>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Invoice #
-                </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Date
-                </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Items
-                </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Total
-                </th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Invoice</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Date & Time</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Items Summary</th>
+                <th className="px-6 py-4 text-right text-xs font-bold text-gray-400 uppercase tracking-wider">Total Amount</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white divide-y divide-gray-50">
               {filteredTransactions.slice(0, 10).map((transaction) => (
-                <tr key={transaction._id}>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                <tr key={transaction._id} className="hover:bg-gray-50/50 transition-colors">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
                     {transaction.invoiceNumber}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {format(
-                      new Date(transaction.timestamp),
-                      "dd MMM yyyy HH:mm",
-                      { locale: id }
-                    )}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    {format(new Date(transaction.timestamp), "dd MMM, HH:mm", { locale: id })}
                   </td>
-                  <td className="px-6 py-4">
-                    {transaction.items.map((item) => (
-                      <div key={item._id}>
-                        {item.name} x {item.quantity}
-                      </div>
-                    ))}
+                  <td className="px-6 py-4 text-sm text-gray-500">
+                    <span className="truncate block max-w-xs">
+                      {transaction.items.map(i => `${i.name} (${i.quantity})`).join(", ")}
+                    </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    Rp{" "}
-                    {new Intl.NumberFormat("id-ID").format(
-                      transaction.totalAmount
-                    )}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-800 text-right">
+                    Rp {new Intl.NumberFormat("id-ID").format(transaction.totalAmount)}
                   </td>
                 </tr>
               ))}
@@ -557,6 +552,27 @@ export default function StatsPage() {
           </table>
         </div>
       </div>
+    </div>
+  );
+}
+
+function MetricCard({ title, value, icon, color }) {
+  const colorMap = {
+    blue: "bg-blue-50 text-blue-600 border-blue-100",
+    purple: "bg-purple-50 text-purple-600 border-purple-100",
+    green: "bg-green-50 text-green-600 border-green-100",
+    orange: "bg-orange-50 text-orange-600 border-orange-100",
+  };
+
+  return (
+    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+      <div className="flex items-center justify-between mb-4">
+        <div className={`p-3 rounded-xl ${colorMap[color]} border`}>
+          <FontAwesomeIcon icon={icon} className="w-5 h-5" />
+        </div>
+      </div>
+      <h3 className="text-sm font-medium text-gray-500 mb-1">{title}</h3>
+      <p className="text-2xl font-bold text-gray-800">{value}</p>
     </div>
   );
 }
