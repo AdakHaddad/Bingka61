@@ -18,7 +18,18 @@ import {
   faReceipt,
   faMicrophone,
   faMicrophoneSlash,
-  faChartSimple
+  faChartSimple,
+  faBowlFood,
+  faCheese,
+  faBowlRice,
+  faCookie,
+  faDrumstickBite,
+  faLeaf,
+  faUtensils,
+  faEgg,
+  faBreadSlice,
+  faSeedling,
+  faFire
 } from "@fortawesome/free-solid-svg-icons";
 import { faBluetooth } from "@fortawesome/free-brands-svg-icons";
 import Link from "next/link";
@@ -647,6 +658,20 @@ export default function Admin() {
     setItems(items.filter((i) => i.name !== menuItemName));
   };
 
+  const getMenuIcon = (name) => {
+    const n = name.toLowerCase();
+    if (n.includes("keju")) return faCheese;
+    if (n.includes("ubi") || n.includes("kentang")) return faSeedling;
+    if (n.includes("daging") || n.includes("rendang") || n.includes("semur")) return faDrumstickBite;
+    if (n.includes("kari") || n.includes("berendam")) return faBowlFood;
+    if (n.includes("kebuli")) return faBowlRice;
+    if (n.includes("tar") || n.includes("susu")) return faCookie;
+    if (n.includes("pandan")) return faLeaf;
+    if (n.includes("blodar")) return faFire;
+    if (n.includes("original")) return faUtensils;
+    return faUtensils;
+  };
+
   const handlePrintLast = async () => {
     if (!invoice) {
       alert("Tidak ada transaksi terakhir untuk dicetak.");
@@ -1083,58 +1108,81 @@ export default function Admin() {
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-1 text-sm font-medium">
-            {menuItems.map((item, index) => (
-              <div
-                key={item._id || item.name}
-                draggable={isEditing}
-                onDragStart={(e) => onDragStart(e, index)}
-                onDragOver={(e) => onDragOver(e, index)}
-                onDragEnd={onDragEnd}
-                className={`relative group ${isEditing ? "wiggle" : ""}`}
-              >
-                <button
-                  onClick={() => !isEditing && handleMenuItemClick(item)}
-                  className={`w-full py-4 rounded active:bg-opacity-60 transition-all ${
-                    item.name === "Nasi Kebuli"
-                      ? "bg-slate-300 text-black"
-                      : item.name === "Rendang"
-                      ? "bg-red-600 text-white"
-                      : item.name === "Kari"
-                      ? "bg-orange-500 text-white"
-                      : item.name === "Semur"
-                      ? "bg-orange-800 text-white"
-                      : item.displayColor || "bg-yellow-400"
-                  } ${isEditing ? "cursor-move ring-2 ring-blue-400 ring-inset" : ""}`}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 text-sm font-medium">
+            {menuItems.map((item, index) => {
+              const quantity = items.find((i) => i.name === item.name)?.quantity || 0;
+              return (
+                <div
+                  key={item._id || item.name}
+                  draggable={isEditing}
+                  onDragStart={(e) => onDragStart(e, index)}
+                  onDragOver={(e) => onDragOver(e, index)}
+                  onDragEnd={onDragEnd}
+                  className={`relative group ${isEditing ? "wiggle" : ""}`}
                 >
-                  {item.name} - {item.price} x{" "}
-                  {items.find((i) => i.name === item.name)?.quantity || 0}
-                </button>
+                  <button
+                    onClick={() => !isEditing && handleMenuItemClick(item)}
+                    className={`w-full flex flex-col items-center justify-center p-3 h-28 rounded-xl shadow-sm hover:shadow-md transition-all relative overflow-hidden active:scale-95 ${
+                      item.name === "Nasi Kebuli"
+                        ? "bg-slate-100 text-slate-800"
+                        : item.name === "Rendang"
+                        ? "bg-red-50 text-red-700"
+                        : item.name === "Kari"
+                        ? "bg-orange-50 text-orange-700"
+                        : item.name === "Semur"
+                        ? "bg-amber-50 text-amber-900"
+                        : "bg-yellow-50 text-yellow-800"
+                    } ${isEditing ? "cursor-move ring-2 ring-blue-400 ring-inset" : "border border-black border-opacity-5"}`}
+                  >
+                    {/* Background Icon Decoration */}
+                    <div className="absolute -right-2 -bottom-2 opacity-5 text-4xl transform -rotate-12">
+                      <FontAwesomeIcon icon={getMenuIcon(item.name)} />
+                    </div>
 
-                {isEditing && isOnline && (
-                  <div className="absolute inset-0 flex items-center justify-center space-x-4 bg-black bg-opacity-10 rounded">
-                    <button
-                      onClick={() => {
-                        const newName = prompt("Nama Menu:", item.name);
-                        const newPrice = prompt("Harga Menu:", item.price);
-                        if (newName && newPrice) {
-                          handleUpdateMenu({ ...item, name: newName, price: parseInt(newPrice) });
-                        }
-                      }}
-                      className="bg-blue-500 text-white w-8 h-8 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-600 transition-transform hover:scale-110"
-                    >
-                      <FontAwesomeIcon icon={faPencil} size="xs" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteMenu(item._id)}
-                      className="bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition-transform hover:scale-110"
-                    >
-                      <FontAwesomeIcon icon={faXmark} size="xs" />
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))}
+                    <div className="text-2xl mb-2 opacity-90">
+                      <FontAwesomeIcon icon={getMenuIcon(item.name)} />
+                    </div>
+                    
+                    <span className="font-bold text-[13px] text-center leading-tight mb-1">
+                      {item.name}
+                    </span>
+                    
+                    <span className="text-[10px] opacity-60 font-bold">
+                      Rp {new Intl.NumberFormat("id-ID").format(item.price)}
+                    </span>
+
+                    {quantity > 0 && (
+                      <div className="absolute top-1 right-1 bg-green-600 text-white text-[10px] font-bold w-6 h-6 rounded-full flex items-center justify-center shadow-sm animate-in zoom-in duration-200">
+                        {quantity}
+                      </div>
+                    )}
+                  </button>
+
+                  {isEditing && isOnline && (
+                    <div className="absolute inset-0 flex items-center justify-center space-x-4 bg-white bg-opacity-80 rounded-xl backdrop-blur-[1px]">
+                      <button
+                        onClick={() => {
+                          const newName = prompt("Nama Menu:", item.name);
+                          const newPrice = prompt("Harga Menu:", item.price);
+                          if (newName && newPrice) {
+                            handleUpdateMenu({ ...item, name: newName, price: parseInt(newPrice) });
+                          }
+                        }}
+                        className="bg-blue-500 text-white w-8 h-8 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-600 transition-transform hover:scale-110"
+                      >
+                        <FontAwesomeIcon icon={faPencil} size="xs" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteMenu(item._id)}
+                        className="bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition-transform hover:scale-110"
+                      >
+                        <FontAwesomeIcon icon={faXmark} size="xs" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </>
       )}
