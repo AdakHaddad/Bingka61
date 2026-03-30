@@ -106,22 +106,64 @@ export default function Admin() {
   const menuItemsRef = useRef(menuItems);
   const [isVoiceMuted, setIsVoiceMuted] = useState(false);
 
+  const [pendingTransactions, setPendingTransactions] = useState([]);
+
   useEffect(() => {
     fetchMenu();
     fetchSettings();
 
+    // Load pending transactions from localStorage
+    const saved = localStorage.getItem("pending_transactions");
+    if (saved) {
+      setPendingTransactions(JSON.parse(saved));
+    }
+
     // Online/Offline Listeners
-    const handleOnline = () => setIsOnline(true);
+    const handleOnline = () => {
+      setIsOnline(true);
+      syncOfflineTransactions();
+    };
     const handleOffline = () => setIsOnline(false);
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
     setIsOnline(navigator.onLine);
+
+    // Initial sync attempt
+    if (navigator.onLine) {
+      syncOfflineTransactions();
+    }
 
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
   }, []);
+
+  const syncOfflineTransactions = async () => {
+    const queue = JSON.parse(localStorage.getItem("pending_transactions") || "[]");
+    if (queue.length === 0) return;
+
+    console.log(`Syncing ${queue.length} offline transactions...`);
+    const remaining = [];
+
+    for (const tx of queue) {
+      try {
+        const res = await fetch("/api/transactions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(tx),
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error("Sync failed");
+      } catch (error) {
+        console.error("Failed to sync transaction:", tx.invoiceNumber, error);
+        remaining.push(tx);
+      }
+    }
+
+    localStorage.setItem("pending_transactions", JSON.stringify(remaining));
+    setPendingTransactions(remaining);
+  };
 
   // Keep menuItemsRef in sync
   useEffect(() => {
@@ -697,17 +739,19 @@ export default function Admin() {
   };
 
   const saveTransaction = async () => {
-    if (!isOnline) {
-      alert("Anda sedang OFFLINE. Hubungkan internet untuk menyimpan transaksi ke database.");
+    if (items.length === 0 || returnAmount < 0) {
+      alert("Tidak dapat menyimpan transaksi. Pastikan ada item dan uang cukup.");
       return;
     }
 
-    if (items.length === 0 || returnAmount < 0) {
-      alert(
-        "Tidak dapat menyimpan transaksi. Pastikan ada item dan uang cukup."
-      );
-      return;
-    }
+    const txData = {
+      items,
+      totalAmount,
+      cashReceived: cash,
+      changeAmount: returnAmount,
+      timestamp: new Date().toISOString(),
+      localId: Date.now().toString()
+    };
 
     setLoading(true);
     try {
@@ -716,35 +760,37 @@ export default function Admin() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          items,
-          totalAmount,
-          cashReceived: cash,
-          changeAmount: returnAmount,
-        }),
+        body: JSON.stringify(txData),
       });
 
       const data = await response.json();
 
       if (data.success) {
         setInvoice(data.data);
-
-        // Prioritize Bluetooth printing if connected
-        if (printerCharacteristic) {
-          await printToBluetooth(data.data);
-        } else {
-          // Fallback to existing server-side printing
-          await sendToPrinter(data.data);
-        }
+        if (printerCharacteristic) await printToBluetooth(data.data);
+        setPrintStatus("success");
+        handleReset();
       } else {
-        alert(
-          "Gagal menyimpan transaksi: " +
-            (data.error || "Error tidak diketahui")
-        );
+        throw new Error("Server error");
       }
     } catch (error) {
-      console.error("Error saving transaction:", error);
-      alert("Gagal menyimpan transaksi");
+      console.warn("Saving to offline queue due to error:", error);
+      
+      const queue = JSON.parse(localStorage.getItem("pending_transactions") || "[]");
+      const offlineTx = { 
+        ...txData, 
+        invoiceNumber: `OFFLINE-${txData.localId.substring(8)}` 
+      };
+      
+      const newQueue = [...queue, offlineTx];
+      localStorage.setItem("pending_transactions", JSON.stringify(newQueue));
+      setPendingTransactions(newQueue);
+      
+      setInvoice(offlineTx);
+      alert("Transaksi disimpan OFFLINE. Akan otomatis terkirim saat internet aktif.");
+      
+      if (printerCharacteristic) await printToBluetooth(offlineTx);
+      handleReset();
     } finally {
       setLoading(false);
     }
@@ -765,6 +811,12 @@ export default function Admin() {
               <span className="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full animate-pulse flex items-center mt-1 w-fit">
                 <span className="w-1.5 h-1.5 bg-white rounded-full mr-1"></span>
                 OFFLINE
+              </span>
+            )}
+            {pendingTransactions.length > 0 && (
+              <span className="bg-orange-500 text-white text-[10px] px-2 py-0.5 rounded-full flex items-center mt-1 w-fit">
+                <span className="w-1.5 h-1.5 bg-white rounded-full mr-1"></span>
+                {pendingTransactions.length} Pending Sync
               </span>
             )}
           </div>
