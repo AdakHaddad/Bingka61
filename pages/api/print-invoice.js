@@ -182,7 +182,3 @@ function generateESCPOSCommands(data, settings, logoBuffer) {
 function formatNumber(number) {
   return new Intl.NumberFormat("id-ID").format(number);
 }
-
-function formatNumber(number) {
-  return new Intl.NumberFormat("id-ID").format(number);
-}
