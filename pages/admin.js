@@ -824,6 +824,7 @@ export default function Admin() {
     setItems([]);
     setCash(0);
     setReturnAmount(0);
+    setPaymentMethod("Tunai");
     setInvoice(null);
     setPrintStatus(null);
   };
@@ -1345,6 +1346,25 @@ export default function Admin() {
             </button>
           </div>
         )}
+
+        <div className="flex space-x-2 mb-4">
+          {["Tunai", "QRIS", "Transfer"].map((method) => (
+            <button
+              key={method}
+              onClick={() => {
+                setPaymentMethod(method);
+                if (method !== "Tunai") setCash(totalAmount);
+              }}
+              className={`flex-1 py-2 rounded-lg font-bold text-sm transition-all ${
+                paymentMethod === method
+                  ? "bg-blue-600 text-white shadow-lg ring-2 ring-blue-300"
+                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              }`}
+            >
+              {method}
+            </button>
+          ))}
+        </div>
 
         <div className="flex items-center">
           <input

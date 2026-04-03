@@ -223,7 +223,7 @@ export default function StatsPage() {
     return Object.values(dayMap).sort((a, b) => a.date.localeCompare(b.date));
   }, [filteredTransactions, dateRange, startDate, endDate]);
 
-  // Busy Hours Data
+  // Generate busy hours data
   const busyHours = React.useMemo(() => {
     const hourMap = Array.from({ length: 24 }, (_, i) => ({
       hour: `${i.toString().padStart(2, '0')}:00`,
@@ -238,6 +238,25 @@ export default function StatsPage() {
     });
 
     return hourMap;
+  }, [filteredTransactions]);
+
+  // Payment Methods Data
+  const paymentMethodStats = React.useMemo(() => {
+    const methodMap = {
+      Tunai: { name: "Tunai", value: 0, revenue: 0 },
+      QRIS: { name: "QRIS", value: 0, revenue: 0 },
+      Transfer: { name: "Transfer", value: 0, revenue: 0 },
+    };
+
+    filteredTransactions.forEach(t => {
+      const method = t.paymentMethod || "Tunai";
+      if (methodMap[method]) {
+        methodMap[method].value += 1;
+        methodMap[method].revenue += t.totalAmount;
+      }
+    });
+
+    return Object.values(methodMap).filter(m => m.value > 0);
   }, [filteredTransactions]);
 
   // Colors for the charts
@@ -482,9 +501,41 @@ export default function StatsPage() {
           </div>
         </div>
 
+        {/* Payment Methods */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+          <h2 className="text-xl font-bold mb-6 text-gray-800">Payment Methods</h2>
+          <div style={{ width: "100%", height: 350 }}>
+            <ResponsiveContainer>
+              <PieChart>
+                <Pie
+                  data={paymentMethodStats}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={100}
+                  paddingAngle={5}
+                  dataKey="revenue"
+                  nameKey="name"
+                >
+                  {paymentMethodStats.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  formatter={(value) => [`Rp ${new Intl.NumberFormat("id-ID").format(value)}`, "Revenue"]} 
+                />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
         {/* Sales Composition */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-          <h2 className="text-xl font-bold mb-6 text-gray-800">Sales Composition</h2>
+          <h2 className="text-xl font-bold mb-6 text-gray-800">Sales Composition (Units)</h2>
           <div style={{ width: "100%", height: 350 }}>
             <ResponsiveContainer>
               <PieChart>
@@ -525,6 +576,7 @@ export default function StatsPage() {
               <tr>
                 <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Invoice</th>
                 <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Date & Time</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Method</th>
                 <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Items Summary</th>
                 <th className="px-6 py-4 text-right text-xs font-bold text-gray-400 uppercase tracking-wider">Total Amount</th>
               </tr>
@@ -537,6 +589,15 @@ export default function StatsPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                     {format(new Date(transaction.timestamp), "dd MMM, HH:mm", { locale: id })}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${
+                      transaction.paymentMethod === 'QRIS' ? 'bg-purple-100 text-purple-700' :
+                      transaction.paymentMethod === 'Transfer' ? 'bg-blue-100 text-blue-700' :
+                      'bg-green-100 text-green-700'
+                    }`}>
+                      {transaction.paymentMethod || 'Tunai'}
+                    </span>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-500">
                     <span className="truncate block max-w-xs">
