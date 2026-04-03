@@ -11,6 +11,11 @@ const TransactionSchema = new mongoose.Schema({
   totalAmount: Number,
   cashReceived: Number,
   changeAmount: Number,
+  paymentMethod: {
+    type: String,
+    enum: ["Tunai", "QRIS", "Transfer"],
+    default: "Tunai",
+  },
   timestamp: {
     type: Date,
     default: Date.now,

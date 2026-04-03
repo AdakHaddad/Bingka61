@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { format } from "date-fns"; // Make sure to import this as it's used in your invoice template
+import { format } from "date-fns";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faGear,
@@ -33,6 +33,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { faBluetooth } from "@fortawesome/free-brands-svg-icons";
 import Link from "next/link";
+import { initDB, saveTransactionLocal, getPendingTransactions, markTransactionSynced } from "../lib/idb";
 
 const INITIAL_MENU_ITEMS = [
   { name: "Original", price: 23000 },
@@ -98,6 +99,7 @@ export default function Admin() {
   const [cash, setCash] = useState(0);
   const [returnAmount, setReturnAmount] = useState(0);
   const [totalAmount, setTotalAmount] = useState(0);
+  const [paymentMethod, setPaymentMethod] = useState("Tunai"); // Default Tunai
   const [invoice, setInvoice] = useState(null);
   const [loading, setLoading] = useState(false);
   const [printStatus, setPrintStatus] = useState(null); // New state for printer status
@@ -118,16 +120,50 @@ export default function Admin() {
   const [isVoiceMuted, setIsVoiceMuted] = useState(false);
 
   const [pendingTransactions, setPendingTransactions] = useState([]);
+  const [logoESCPOS, setLogoESCPOS] = useState(null);
+  const [autoPrint, setAutoPrint] = useState(true);
+
+  useEffect(() => {
+    const savedAutoPrint = localStorage.getItem("autoPrint");
+    if (savedAutoPrint !== null) {
+      setAutoPrint(savedAutoPrint === "true");
+    }
+  }, []);
+
+  const toggleAutoPrint = () => {
+    const newVal = !autoPrint;
+    setAutoPrint(newVal);
+    localStorage.setItem("autoPrint", newVal.toString());
+  };
 
   useEffect(() => {
     fetchMenu();
     fetchSettings();
-
-    // Load pending transactions from localStorage
-    const saved = localStorage.getItem("pending_transactions");
-    if (saved) {
-      setPendingTransactions(JSON.parse(saved));
-    }
+    
+    const setupDB = async () => {
+      await initDB();
+      
+      // Migrate from localStorage to IndexedDB if needed
+      const saved = localStorage.getItem("pending_transactions");
+      if (saved) {
+        try {
+          const queue = JSON.parse(saved);
+          for (const tx of queue) {
+            await saveTransactionLocal({ ...tx, synced: false, localId: tx.localId || Date.now().toString() });
+          }
+          localStorage.removeItem("pending_transactions");
+        } catch (e) {
+          console.error("Migration failed", e);
+        }
+      }
+      
+      if (navigator.onLine) {
+        syncOfflineTransactions();
+      }
+    };
+    
+    setupDB();
+    loadLogo();
 
     // Online/Offline Listeners
     const handleOnline = () => {
@@ -139,25 +175,74 @@ export default function Admin() {
     window.addEventListener("offline", handleOffline);
     setIsOnline(navigator.onLine);
 
-    // Initial sync attempt
-    if (navigator.onLine) {
-      syncOfflineTransactions();
-    }
-
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
   }, []);
 
+  const loadLogo = async () => {
+    try {
+      const img = new Image();
+      img.src = "/logostruk.png";
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        
+        // POS printers usually prefer 384px or 576px width
+        const targetWidth = 256; 
+        const scale = targetWidth / img.width;
+        canvas.width = targetWidth;
+        canvas.height = img.height * scale;
+        
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        
+        // Convert to ESC/POS Bit Image format (1D 76 30 ...)
+        const width = canvas.width;
+        const height = canvas.height;
+        const bytesPerLine = Math.ceil(width / 8);
+        const buffer = new Uint8Array(8 + bytesPerLine * height);
+        
+        buffer[0] = 0x1d; buffer[1] = 0x76; buffer[2] = 0x30; buffer[3] = 0;
+        buffer[4] = bytesPerLine & 0xff;
+        buffer[5] = (bytesPerLine >> 8) & 0xff;
+        buffer[6] = height & 0xff;
+        buffer[7] = (height >> 8) & 0xff;
+
+        for (let y = 0; y < height; y++) {
+          for (let x = 0; x < width; x++) {
+            const idx = (y * width + x) * 4;
+            const r = imageData.data[idx];
+            const g = imageData.data[idx+1];
+            const b = imageData.data[idx+2];
+            const gray = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+            
+            if (gray < 128) {
+              const byteIdx = 8 + y * bytesPerLine + Math.floor(x / 8);
+              const bitIdx = 7 - (x % 8);
+              buffer[byteIdx] |= (1 << bitIdx);
+            }
+          }
+        }
+        setLogoESCPOS(buffer);
+      };
+    } catch (e) {
+      console.error("Logo load error:", e);
+    }
+  };
+
   const syncOfflineTransactions = async () => {
-    const queue = JSON.parse(localStorage.getItem("pending_transactions") || "[]");
-    if (queue.length === 0) return;
+    const pending = await getPendingTransactions();
+    if (pending.length === 0) {
+      setPendingTransactions([]);
+      return;
+    }
 
-    console.log(`Syncing ${queue.length} offline transactions...`);
-    const remaining = [];
+    console.log(`Syncing ${pending.length} offline transactions...`);
+    setPendingTransactions(pending);
 
-    for (const tx of queue) {
+    for (const tx of pending) {
       try {
         const res = await fetch("/api/transactions", {
           method: "POST",
@@ -165,15 +250,17 @@ export default function Admin() {
           body: JSON.stringify(tx),
         });
         const data = await res.json();
-        if (!data.success) throw new Error("Sync failed");
+        if (data.success) {
+          await markTransactionSynced(tx.localId, data.data);
+        }
       } catch (error) {
-        console.error("Failed to sync transaction:", tx.invoiceNumber, error);
-        remaining.push(tx);
+        console.error("Failed to sync transaction:", tx.localId, error);
       }
     }
-
-    localStorage.setItem("pending_transactions", JSON.stringify(remaining));
-    setPendingTransactions(remaining);
+    
+    // Refresh the pending list
+    const updatedPending = await getPendingTransactions();
+    setPendingTransactions(updatedPending);
   };
 
   // Keep menuItemsRef in sync
@@ -434,6 +521,12 @@ export default function Admin() {
     // Center Align
     commands.push(new Uint8Array([0x1b, 0x61, 0x01]));
     
+    // Logo
+    if (logoESCPOS) {
+      commands.push(logoESCPOS);
+      commands.push(encoder.encode("\n"));
+    }
+
     // Header
     commands.push(new Uint8Array([0x1b, 0x45, 0x01])); // Bold On
     commands.push(encoder.encode(`${settings.storeName}\n`));
@@ -769,55 +862,56 @@ export default function Admin() {
       return;
     }
 
+    const localId = Date.now().toString();
     const txData = {
+      localId,
       items,
       totalAmount,
       cashReceived: cash,
       changeAmount: returnAmount,
+      paymentMethod, // Included here
       timestamp: new Date().toISOString(),
-      localId: Date.now().toString()
+      invoiceNumber: `POS-${localId.substring(8)}`, // Temporary ID
+      synced: false
     };
 
-    setLoading(true);
+    // 1. Save locally IMMEDIATELY (Fast)
     try {
-      const response = await fetch("/api/transactions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(txData),
-      });
+      await saveTransactionLocal(txData);
+    } catch (e) {
+      console.error("Local save failed", e);
+    }
 
-      const data = await response.json();
-
-      if (data.success) {
-        setInvoice(data.data);
-        if (printerCharacteristic) await printToBluetooth(data.data);
-        setPrintStatus("success");
-        handleReset();
+    // 2. Set UI state (invoice)
+    setInvoice(txData);
+    
+    // 3. Trigger Print if enabled
+    if (autoPrint) {
+      if (printerCharacteristic) {
+        printToBluetooth(txData);
       } else {
-        throw new Error("Server error");
+        sendToPrinter(txData);
       }
-    } catch (error) {
-      console.warn("Saving to offline queue due to error:", error);
-      
-      const queue = JSON.parse(localStorage.getItem("pending_transactions") || "[]");
-      const offlineTx = { 
-        ...txData, 
-        invoiceNumber: `OFFLINE-${txData.localId.substring(8)}` 
-      };
-      
-      const newQueue = [...queue, offlineTx];
-      localStorage.setItem("pending_transactions", JSON.stringify(newQueue));
-      setPendingTransactions(newQueue);
-      
-      setInvoice(offlineTx);
-      alert("Transaksi disimpan OFFLINE. Akan otomatis terkirim saat internet aktif.");
-      
-      if (printerCharacteristic) await printToBluetooth(offlineTx);
-      handleReset();
-    } finally {
-      setLoading(false);
+    }
+
+    // 4. Background Sync (don't await)
+    fetch("/api/transactions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(txData),
+    }).then(res => res.json()).then(data => {
+      if (data.success) {
+        markTransactionSynced(localId, data.data);
+      }
+    }).catch(err => console.warn("Background sync will retry later", err));
+
+    // 5. Reset Order UI (but keep invoice for potential reprint)
+    setItems([]);
+    setCash(0);
+    setReturnAmount(0);
+    
+    if (!autoPrint) {
+      setPrintStatus("saved_no_print");
     }
   };
 
@@ -846,7 +940,17 @@ export default function Admin() {
             )}
           </div>
         </div>
-        <div className="flex space-x-2">
+        <div className="flex items-center space-x-2">
+          {/* Auto Print Toggle */}
+          <div className="flex items-center bg-gray-800 bg-opacity-50 px-3 py-1.5 rounded-lg border border-white border-opacity-10 mr-2">
+            <span className="text-[10px] font-bold text-gray-300 mr-2">CETAK OTOMATIS</span>
+            <button 
+              onClick={toggleAutoPrint}
+              className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors ${autoPrint ? 'bg-green-500' : 'bg-gray-600'}`}
+            >
+              <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${autoPrint ? 'translate-x-5' : 'translate-x-0'}`}></div>
+            </button>
+          </div>
           <button
             onClick={() => {
               setView("pos");
@@ -1308,17 +1412,30 @@ export default function Admin() {
 
           {printStatus && (
             <div
-              className={`mt-2 text-sm ${
+              className={`mt-2 text-sm flex flex-col items-center ${
                 printStatus === "sending"
                   ? "text-blue-500"
-                  : printStatus === "success"
+                  : printStatus === "success" || printStatus === "saved_no_print"
                   ? "text-green-500"
                   : "text-red-500"
               }`}
             >
-              {printStatus === "sending" && "Mengirim ke printer..."}
-              {printStatus === "success" && "Struk berhasil dicetak!"}
-              {printStatus === "error" && "Gagal mencetak struk. Coba lagi."}
+              <div className="flex items-center">
+                {printStatus === "sending" && "Mengirim ke printer..."}
+                {printStatus === "success" && "Struk berhasil dicetak!"}
+                {printStatus === "saved_no_print" && "Transaksi berhasil disimpan (Tanpa Cetak)."}
+                {printStatus === "error" && "Gagal mencetak struk."}
+              </div>
+              
+              {(printStatus === "error" || printStatus === "saved_no_print") && (
+                <button
+                  onClick={handlePrintLast}
+                  className="mt-2 bg-blue-500 text-white px-4 py-1 rounded-full text-xs font-bold hover:bg-blue-600 transition-colors shadow-sm"
+                >
+                  <FontAwesomeIcon icon={faPrint} className="mr-1" />
+                  {printStatus === "error" ? "Coba Lagi" : "Cetak Sekarang"}
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -1381,6 +1498,11 @@ export default function Admin() {
           }}
         >
           <div style={{ textAlign: "center", marginBottom: "10px" }}>
+            <img 
+              src="/logostruk.png" 
+              alt="Logo" 
+              style={{ maxWidth: "150px", marginBottom: "10px" }} 
+            />
             <h2 style={{ margin: "0", fontSize: "14px", fontWeight: "bold" }}>
               {settings.storeName}
             </h2>
