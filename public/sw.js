@@ -1,10 +1,11 @@
-const CACHE_NAME = "bingka61-pos-v2";
+const CACHE_NAME = "bingka61-pos-v3";
 const STATIC_ASSETS = [
   "/",
   "/admin",
   "/stats",
   "/manifest.json",
   "/favicon.ico",
+  "/logostruk.png",
   "/css/globals.css",
   "/images/1k.png",
   "/images/2k.png",

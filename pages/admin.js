@@ -33,7 +33,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { faBluetooth } from "@fortawesome/free-brands-svg-icons";
 import Link from "next/link";
-import { initDB, saveTransactionLocal, getPendingTransactions, markTransactionSynced } from "../lib/idb";
+import { initDB, saveTransactionLocal, getPendingTransactions, markTransactionSynced, removeSyncedTransactions, setCacheItem, getCacheItem } from "../lib/idb";
 
 const INITIAL_MENU_ITEMS = [
   { name: "Original", price: 23000 },
@@ -122,6 +122,8 @@ export default function Admin() {
   const [pendingTransactions, setPendingTransactions] = useState([]);
   const [logoESCPOS, setLogoESCPOS] = useState(null);
   const [autoPrint, setAutoPrint] = useState(true);
+  const syncInProgressRef = useRef(false);
+  const syncIntervalRef = useRef(null);
 
   useEffect(() => {
     const savedAutoPrint = localStorage.getItem("autoPrint");
@@ -175,9 +177,19 @@ export default function Admin() {
     window.addEventListener("offline", handleOffline);
     setIsOnline(navigator.onLine);
 
+    // Periodic sync retry every 30 seconds
+    syncIntervalRef.current = setInterval(() => {
+      if (navigator.onLine) {
+        syncOfflineTransactions();
+      }
+    }, 30000);
+
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
+      if (syncIntervalRef.current) {
+        clearInterval(syncIntervalRef.current);
+      }
     };
   }, []);
 
@@ -185,25 +197,38 @@ export default function Admin() {
     try {
       const img = new Image();
       img.src = "/logostruk.png";
+
+      img.onerror = async () => {
+        console.warn("Logo image failed to load, trying IndexedDB cache");
+        try {
+          const cached = await getCacheItem("logoESCPOS");
+          if (cached) {
+            setLogoESCPOS(new Uint8Array(cached));
+          }
+        } catch (e) {
+          console.error("Logo cache load failed:", e);
+        }
+      };
+
       img.onload = () => {
         const canvas = document.createElement("canvas");
         const ctx = canvas.getContext("2d");
-        
+
         // POS printers usually prefer 384px or 576px width
-        const targetWidth = 256; 
+        const targetWidth = 256;
         const scale = targetWidth / img.width;
         canvas.width = targetWidth;
         canvas.height = img.height * scale;
-        
+
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        
+
         // Convert to ESC/POS Bit Image format (1D 76 30 ...)
         const width = canvas.width;
         const height = canvas.height;
         const bytesPerLine = Math.ceil(width / 8);
         const buffer = new Uint8Array(8 + bytesPerLine * height);
-        
+
         buffer[0] = 0x1d; buffer[1] = 0x76; buffer[2] = 0x30; buffer[3] = 0;
         buffer[4] = bytesPerLine & 0xff;
         buffer[5] = (bytesPerLine >> 8) & 0xff;
@@ -217,7 +242,7 @@ export default function Admin() {
             const g = imageData.data[idx+1];
             const b = imageData.data[idx+2];
             const gray = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-            
+
             if (gray < 128) {
               const byteIdx = 8 + y * bytesPerLine + Math.floor(x / 8);
               const bitIdx = 7 - (x % 8);
@@ -226,6 +251,7 @@ export default function Admin() {
           }
         }
         setLogoESCPOS(buffer);
+        setCacheItem("logoESCPOS", Array.from(buffer)).catch(() => {});
       };
     } catch (e) {
       console.error("Logo load error:", e);
@@ -233,34 +259,50 @@ export default function Admin() {
   };
 
   const syncOfflineTransactions = async () => {
-    const pending = await getPendingTransactions();
-    if (pending.length === 0) {
-      setPendingTransactions([]);
-      return;
-    }
+    if (syncInProgressRef.current) return;
+    syncInProgressRef.current = true;
 
-    console.log(`Syncing ${pending.length} offline transactions...`);
-    setPendingTransactions(pending);
-
-    for (const tx of pending) {
-      try {
-        const res = await fetch("/api/transactions", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(tx),
-        });
-        const data = await res.json();
-        if (data.success) {
-          await markTransactionSynced(tx.localId, data.data);
-        }
-      } catch (error) {
-        console.error("Failed to sync transaction:", tx.localId, error);
+    try {
+      const pending = await getPendingTransactions();
+      if (pending.length === 0) {
+        setPendingTransactions([]);
+        return;
       }
+
+      console.log(`Syncing ${pending.length} offline transactions...`);
+      setPendingTransactions(pending);
+
+      const BATCH_SIZE = 5;
+      for (let i = 0; i < pending.length; i += BATCH_SIZE) {
+        const batch = pending.slice(i, i + BATCH_SIZE);
+        const results = await Promise.allSettled(
+          batch.map(async (tx) => {
+            const res = await fetch("/api/transactions", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(tx),
+            });
+            const data = await res.json();
+            if (data.success) {
+              await markTransactionSynced(tx.localId, data.data);
+            }
+            return data;
+          })
+        );
+
+        results.forEach((result, idx) => {
+          if (result.status === "rejected") {
+            console.error("Failed to sync transaction:", batch[idx].localId, result.reason);
+          }
+        });
+      }
+
+      await removeSyncedTransactions();
+      const updatedPending = await getPendingTransactions();
+      setPendingTransactions(updatedPending);
+    } finally {
+      syncInProgressRef.current = false;
     }
-    
-    // Refresh the pending list
-    const updatedPending = await getPendingTransactions();
-    setPendingTransactions(updatedPending);
   };
 
   // Keep menuItemsRef in sync
@@ -329,12 +371,27 @@ export default function Admin() {
       if (data.success && data.data.length > 0) {
         setMenuItems(data.data);
         setIsFromDB(true);
+        setCacheItem("menuItems", data.data).catch(() => {});
       } else {
-        setMenuItems(INITIAL_MENU_ITEMS);
-        setIsFromDB(false);
+        const cached = await getCacheItem("menuItems").catch(() => null);
+        if (cached && cached.length > 0) {
+          setMenuItems(cached);
+          setIsFromDB(true);
+        } else {
+          setMenuItems(INITIAL_MENU_ITEMS);
+          setIsFromDB(false);
+        }
       }
     } catch (error) {
       console.error("Error fetching menu:", error);
+      try {
+        const cached = await getCacheItem("menuItems");
+        if (cached && cached.length > 0) {
+          setMenuItems(cached);
+          setIsFromDB(true);
+          return;
+        }
+      } catch (_) {}
       setMenuItems(INITIAL_MENU_ITEMS);
       setIsFromDB(false);
     }
@@ -346,9 +403,16 @@ export default function Admin() {
       const data = await res.json();
       if (data.success) {
         setSettings(data.data);
+        setCacheItem("settings", data.data).catch(() => {});
       }
     } catch (error) {
       console.error("Error fetching settings:", error);
+      try {
+        const cached = await getCacheItem("settings");
+        if (cached) {
+          setSettings(cached);
+        }
+      } catch (_) {}
     }
   };
 
@@ -772,8 +836,10 @@ export default function Admin() {
     }
     if (printerCharacteristic) {
       await printToBluetooth(invoice);
-    } else {
+    } else if (navigator.onLine) {
       await sendToPrinter(invoice);
+    } else {
+      alert("Printer jaringan tidak tersedia saat offline. Hubungkan printer Bluetooth.");
     }
   };
 
@@ -890,7 +956,7 @@ export default function Admin() {
     if (autoPrint) {
       if (printerCharacteristic) {
         printToBluetooth(txData);
-      } else {
+      } else if (navigator.onLine) {
         sendToPrinter(txData);
       }
     }
@@ -900,9 +966,12 @@ export default function Admin() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(txData),
-    }).then(res => res.json()).then(data => {
+    }).then(res => res.json()).then(async (data) => {
       if (data.success) {
-        markTransactionSynced(localId, data.data);
+        await markTransactionSynced(localId, data.data);
+        await removeSyncedTransactions();
+        const updatedPending = await getPendingTransactions();
+        setPendingTransactions(updatedPending);
       }
     }).catch(err => console.warn("Background sync will retry later", err));
 
