@@ -2,23 +2,6 @@ import dbConnect from "../../lib/mongodb";
 import Transaction from "../../models/Transaction";
 import { formatISO } from "date-fns";
 
-async function sendToPrinter(invoiceData) {
-  try {
-    // Call the local print API
-    // We use a full URL or internal call if possible, but since this is a Next.js API route,
-    // we might need to handle the print logic directly here or call it.
-    // To keep it clean and fast, let's call the existing print-invoice handler logic.
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-    await fetch(`${baseUrl}/api/print-invoice`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(invoiceData),
-    });
-  } catch (error) {
-    console.error("Background print error:", error);
-  }
-}
-
 export default async function handler(req, res) {
   const { method } = req;
 
@@ -39,55 +22,34 @@ export default async function handler(req, res) {
       break;
     case "POST":
       try {
-        // Generate invoice number: BKA-YYYYMMDD-XXXX
-        const now = new Date();
-        const dateStr = formatISO(now, { representation: "date" }).replace(/-/g, "");
-
-        // Get the count of transactions for today to generate sequential number
-        const todayStart = new Date(now);
-        todayStart.setHours(0, 0, 0, 0);
-        const todayEnd = new Date(now);
-        todayEnd.setHours(23, 59, 59, 999);
-
-        const todayCount = await Transaction.countDocuments({
-          timestamp: { $gte: todayStart, $lte: todayEnd },
-        });
-
-        const invoiceNumber = `BKA-${dateStr}-${(todayCount + 1).toString().padStart(4, "0")}`;
-        const timestamp = new Date().toISOString();
-
-        const invoiceData = {
-          ...req.body,
-          invoiceNumber,
-          timestamp,
-        };
-
-        // 1. Respond to client immediately with the generated data so they don't wait
-        res.status(201).json({ success: true, data: invoiceData });
-
-        // 2. Perform background tasks: Print and then Save to DB
-        // We do this AFTER res.status().json() has been called in a serverless environment
-        // Note: In some Vercel/Serverless environments, execution might be clipped.
-        // But for local/standard Node.js, this works well.
-        
-        (async () => {
-          try {
-            // Print first
-            await sendToPrinter(invoiceData);
-            
-            // Then save to DB
-            await Transaction.create(invoiceData);
-            console.log(`Transaction ${invoiceNumber} printed and saved successfully.`);
-          } catch (err) {
-            console.error("Background task failed:", err);
-          }
-        })();
-
-      } catch (error) {
-        console.error("POST Transaction error:", error);
-        if (!res.writableEnded) {
-          res.status(400).json({ success: false, error: error.message });
+        const body = req.body || {};
+        if (!body.localId || !Array.isArray(body.items) || body.items.length === 0 || !Number.isFinite(body.totalAmount)) {
+          return res.status(422).json({ success: false, error: "Invalid transaction payload" });
         }
+        const existing = await Transaction.findOne({ localId: body.localId });
+        if (existing) return res.status(200).json({ success: true, data: existing, duplicate: true });
+        const occurredAt = body.timestamp ? new Date(body.timestamp) : new Date();
+        if (Number.isNaN(occurredAt.getTime())) return res.status(422).json({ success: false, error: "Invalid transaction timestamp" });
+        const dateStr = formatISO(occurredAt, { representation: "date" }).replace(/-/g, "");
+        const invoiceNumber = body.invoiceNumber || "BKA-" + dateStr + "-" + body.localId.slice(-6);
+        const transaction = await Transaction.create({ ...body, timestamp: occurredAt, invoiceNumber, cloudBackupStatus: process.env.GOOGLE_BACKUP_URL ? "pending" : "not_configured" });
+        if (process.env.GOOGLE_BACKUP_URL) {
+          void fetch(process.env.GOOGLE_BACKUP_URL, {
+            method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": body.localId },
+            body: JSON.stringify({ idempotencyKey: body.localId, transaction }),
+          }).then((response) => {
+            if (!response.ok) throw new Error("Google backup returned " + response.status);
+            return Transaction.findByIdAndUpdate(transaction._id, { cloudBackupStatus: "synced", cloudBackedUpAt: new Date(), cloudBackupError: null });
+          }).catch((backupError) => Transaction.findByIdAndUpdate(transaction._id, { cloudBackupStatus: "failed", cloudBackupError: backupError.message }));
+        }
+        res.status(201).json({ success: true, data: transaction });
+      } catch (error) {
+        if (error?.code === 11000 && req.body?.localId) {
+          const existing = await Transaction.findOne({ localId: req.body.localId });
+          return res.status(200).json({ success: true, data: existing, duplicate: true });
+        }
+        console.error("POST Transaction error:", error);
+        res.status(400).json({ success: false, error: error.message || "Unable to save transaction" });
       }
       break;
     default:

@@ -6,6 +6,8 @@ const TransactionSchema = new mongoose.Schema({
       name: String,
       price: Number,
       quantity: Number,
+      category: String,
+      productId: String,
     },
   ],
   totalAmount: Number,
@@ -21,6 +23,10 @@ const TransactionSchema = new mongoose.Schema({
     default: Date.now,
   },
   invoiceNumber: String,
+  localId: { type: String, required: true, unique: true, index: true },
+  cloudBackupStatus: { type: String, enum: ["pending", "synced", "failed", "not_configured"], default: "not_configured" },
+  cloudBackupError: String,
+  cloudBackedUpAt: Date,
 });
 
 export default mongoose.models.Transaction ||

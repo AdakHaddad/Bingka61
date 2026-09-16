@@ -33,7 +33,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { faBluetooth } from "@fortawesome/free-brands-svg-icons";
 import Link from "next/link";
-import { initDB, saveTransactionLocal, getPendingTransactions, markTransactionSynced, removeSyncedTransactions, setCacheItem, getCacheItem } from "../lib/idb";
+import { initDB, saveTransactionLocal, getPendingTransactions, markTransactionSyncAttempt, markTransactionSynced, markTransactionSyncFailed, setCacheItem, getCacheItem } from "../lib/idb";
 
 const INITIAL_MENU_ITEMS = [
   { name: "Original", price: 23000 },
@@ -277,6 +277,7 @@ export default function Admin() {
         const batch = pending.slice(i, i + BATCH_SIZE);
         const results = await Promise.allSettled(
           batch.map(async (tx) => {
+            await markTransactionSyncAttempt(tx.localId);
             const res = await fetch("/api/transactions", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -285,19 +286,21 @@ export default function Admin() {
             const data = await res.json();
             if (data.success) {
               await markTransactionSynced(tx.localId, data.data);
+              } else {
+                await markTransactionSyncFailed(tx.localId, new Error(data.error || "Server rejected transaction"));
             }
             return data;
           })
         );
 
-        results.forEach((result, idx) => {
+        await Promise.all(results.map(async (result, idx) => {
           if (result.status === "rejected") {
             console.error("Failed to sync transaction:", batch[idx].localId, result.reason);
+            await markTransactionSyncFailed(batch[idx].localId, result.reason);
           }
-        });
+        }));
       }
 
-      await removeSyncedTransactions();
       const updatedPending = await getPendingTransactions();
       setPendingTransactions(updatedPending);
     } finally {
@@ -939,7 +942,9 @@ export default function Admin() {
       paymentMethod, // Included here
       timestamp: new Date().toISOString(),
       invoiceNumber: `POS-${localId.substring(8)}`, // Temporary ID
-      synced: false
+      synced: false,
+      syncStatus: "pending",
+      syncAttempts: 0
     };
 
     // 1. Save locally IMMEDIATELY (Fast)
@@ -961,19 +966,10 @@ export default function Admin() {
       }
     }
 
-    // 4. Background Sync (don't await)
-    fetch("/api/transactions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(txData),
-    }).then(res => res.json()).then(async (data) => {
-      if (data.success) {
-        await markTransactionSynced(localId, data.data);
-        await removeSyncedTransactions();
-        const updatedPending = await getPendingTransactions();
-        setPendingTransactions(updatedPending);
-      }
-    }).catch(err => console.warn("Background sync will retry later", err));
+    // 4. Background sync is idempotent and keeps local records after success.
+    if (navigator.onLine) {
+      syncOfflineTransactions();
+    }
 
     // 5. Reset Order UI (but keep invoice for potential reprint)
     setItems([]);
@@ -1021,6 +1017,14 @@ export default function Admin() {
               <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${autoPrint ? 'translate-x-5' : 'translate-x-0'}`}></div>
             </button>
           </div>
+          <button
+            onClick={syncOfflineTransactions}
+            disabled={!isOnline || pendingTransactions.length === 0}
+            className="p-2 rounded bg-sky-600 hover:bg-sky-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white"
+            title="Sync pending transactions now"
+          >
+            <FontAwesomeIcon icon={faRotateRight} />
+          </button>
           <button
             onClick={() => {
               setView("pos");
