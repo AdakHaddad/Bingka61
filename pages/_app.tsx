@@ -1,5 +1,6 @@
 import "../css/globals.css";
-import RootLayout from "../components/layout.js";
+import type { AppProps } from "next/app";
+import RootLayout from "../components/layout";
 import { Analytics } from "@vercel/analytics/react";
 import { useEffect } from "react";
 import Head from "next/head";
@@ -9,18 +10,18 @@ import { config } from "@fortawesome/fontawesome-svg-core";
 import "@fortawesome/fontawesome-svg-core/styles.css";
 config.autoAddCss = false;
 
-export default function MyApp({ Component, pageProps }) {
+export default function MyApp({ Component, pageProps }: AppProps) {
   useEffect(() => {
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", function () {
-        navigator.serviceWorker.register("/sw.js").then(
-          function (registration) {
+        navigator.serviceWorker
+          .register("/sw.js")
+          .then(function (registration) {
             console.log("Service Worker registration successful with scope: ", registration.scope);
-          },
-          function (err) {
+          })
+          .catch(function (err: unknown) {
             console.log("Service Worker registration failed: ", err);
-          }
-        );
+          });
       });
     }
   }, []);

@@ -1,12 +1,14 @@
 import React from "react";
+import type { ReactNode } from "react";
 import Head from "next/head";
+
 export const metadata = {
   title: "Bingke 61",
   description:
     "Toko kue oleh-oleh lengkap khas Pontianak serta makanan ringan. Temukan rasa yang kaya dan warisan budaya Kalimantan Barat melalui pilihan eksklusif kami dari kue oleh-oleh. Kunjungi kami hari ini dan nikmati cita rasa masakan Indonesia yang otentik. ",
 };
 
-export default function RootLayout({ children }) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <>
       <Head>
@@ -32,7 +34,7 @@ export default function RootLayout({ children }) {
         <meta property="og:type" content="website" />
       </Head>
 
-      <main className="flex-grow  bg-gradient-to-r from-yellow-400 via-red-500 to-pink-500">
+      <main className="flex-grow bg-gradient-to-r from-yellow-400 via-red-500 to-pink-500">
         {children}
       </main>
     </>
