@@ -193,6 +193,12 @@ export default function AdminPage() {
     return ["Semua", ...[...set].sort()];
   }, [menuItems]);
 
+  useEffect(() => {
+    if (category !== "Semua" && !categories.includes(category)) {
+      setCategory("Semua");
+    }
+  }, [categories, category]);
+
   const filteredMenu = useMemo(() => {
     const q = search.trim().toLowerCase();
     return menuItems.filter((m) => {
@@ -710,16 +716,39 @@ export default function AdminPage() {
     if (!newMenuItem.name.trim() || newMenuItem.price <= 0 || !isOnline) return;
     setLoading(true);
     try {
+      if (!isFromDB) {
+        for (const [idx, item] of INITIAL_MENU_ITEMS.entries()) {
+          try {
+            await fetch("/api/menu", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ ...item, order: idx }),
+            });
+          } catch {
+            /* ignore seed error */
+          }
+        }
+      }
+
       const res = await fetch("/api/menu", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newMenuItem),
+        body: JSON.stringify({
+          name: newMenuItem.name.trim(),
+          price: newMenuItem.price,
+          category: newMenuItem.category.trim() || "Bingke",
+        }),
       });
-      const data = (await res.json()) as { success: boolean };
+      const data = (await res.json()) as { success: boolean; error?: string };
       if (data.success) {
         setNewMenuItem({ name: "", price: 0, category: "Bingke" });
+        setNotice("Menu berhasil ditambahkan.");
         await fetchMenu();
+      } else {
+        alert(data.error || "Gagal menambahkan menu.");
       }
+    } catch (e) {
+      alert(`Gagal menambahkan menu: ${e instanceof Error ? e.message : "unknown error"}`);
     } finally {
       setLoading(false);
     }
@@ -1095,29 +1124,35 @@ export default function AdminPage() {
               </button>
             </div>
 
-            {!isFromDB && (
+            <div className="mt-3 flex flex-wrap gap-2">
               <button
                 onClick={() => {
-                  if (!confirm("Simpan semua menu awal ke database?")) return;
+                  if (!confirm("Pulihkan semua menu awal (Original, Keju, Rendang, dll)?")) return;
                   (async () => {
                     setLoading(true);
                     try {
-                      for (const item of INITIAL_MENU_ITEMS) {
-                        await fetch("/api/menu", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(item) });
+                      for (const [idx, item] of INITIAL_MENU_ITEMS.entries()) {
+                        await fetch("/api/menu", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ ...item, order: idx }),
+                        });
                       }
                       await fetchMenu();
-                      setNotice("Menu awal tersimpan ke database.");
+                      setNotice("Semua menu awal berhasil dipulihkan.");
+                    } catch {
+                      alert("Gagal memulihkan menu awal.");
                     } finally {
                       setLoading(false);
                     }
                   })();
                 }}
-                disabled={!isOnline}
-                className="mt-3 w-full rounded bg-black py-2.5 text-sm font-extrabold text-white hover:bg-black/80 disabled:bg-black/10"
+                disabled={!isOnline || loading}
+                className="rounded bg-black/80 px-3 py-1.5 text-xs font-bold text-white hover:bg-black disabled:bg-black/10 disabled:text-black/40"
               >
-                <FontAwesomeIcon icon={faMoneyBillWave} className="mr-2" /> Simpan menu awal ke database
+                <FontAwesomeIcon icon={faRotateRight} className="mr-1.5" /> Pulihkan Menu Awal
               </button>
-            )}
+            </div>
 
             <div className="mt-3 overflow-x-auto rounded ring-1 ring-black/10">
               <table className="min-w-full divide-y divide-black/10 text-sm">

@@ -7,6 +7,23 @@ interface ReorderRow {
   order?: unknown;
 }
 
+export const INITIAL_MENU_ITEMS = [
+  { name: "Original", price: 23000, category: "Bingke", order: 0 },
+  { name: "Blodar", price: 15000, category: "Bingke", order: 1 },
+  { name: "Berendam", price: 25000, category: "Bingke", order: 2 },
+  { name: "Tar Susu", price: 45000, category: "Bingke", order: 3 },
+  { name: "Keju", price: 25000, category: "Bingke", order: 4 },
+  { name: "Rendang", price: 17000, category: "Rempah", order: 5 },
+  { name: "Kentang", price: 25000, category: "Bingke", order: 6 },
+  { name: "Kari", price: 17000, category: "Rempah", order: 7 },
+  { name: "Ubi", price: 25000, category: "Bingke", order: 8 },
+  { name: "Semur", price: 17000, category: "Rempah", order: 9 },
+  { name: "Daging", price: 30000, category: "Bingke", order: 10 },
+  { name: "Nasi Kebuli", price: 150000, category: "Nasi", order: 11 },
+  { name: "Pandan", price: 25000, category: "Bingke", order: 12 },
+  { name: "Durian", price: 30000, category: "Bingke", order: 13 },
+];
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse): Promise<void> {
   const { method } = req;
 
@@ -24,7 +41,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   switch (method) {
     case "GET": {
       try {
-        const menuItems = await Menu.find({ isActive: true }).sort({ order: 1, createdAt: 1 }).lean();
+        const existingDocs = await Menu.find({}, { name: 1 }).lean();
+        const existingNames = new Set(existingDocs.map((m) => m.name));
+        const missing = INITIAL_MENU_ITEMS.filter((it) => !existingNames.has(it.name));
+        if (missing.length > 0) {
+          const highest = await Menu.findOne({ isActive: { $ne: false } }).sort({ order: -1 }).lean();
+          let nextOrder = typeof highest?.order === "number" && !isNaN(highest.order) ? highest.order + 1 : 0;
+          await Menu.insertMany(
+            missing.map((item) => ({
+              ...item,
+              order: nextOrder++,
+              isActive: true,
+            })),
+          );
+        }
+
+        const menuItems = await Menu.find({ isActive: { $ne: false } }).sort({ order: 1, createdAt: 1 }).lean();
         res.status(200).json({ success: true, data: menuItems });
       } catch (error) {
         res.status(400).json({ success: false, data: null, error: error instanceof Error ? error.message : "query failed" });
@@ -33,10 +65,53 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     case "POST": {
       try {
-        const lastItem = await Menu.findOne({ isActive: true }).sort({ order: -1 });
-        const newOrder = lastItem ? lastItem.order + 1 : 0;
+        const count = await Menu.countDocuments();
+        if (count === 0) {
+          await Menu.insertMany(INITIAL_MENU_ITEMS.map((item, idx) => ({ ...item, order: idx, isActive: true })));
+        }
+
         const body = (req.body ?? {}) as Record<string, unknown>;
-        const menuItem = await Menu.create({ ...body, order: newOrder });
+        const name = String(body.name ?? "").trim();
+        if (!name) {
+          res.status(422).json({ success: false, data: null, error: "Nama menu tidak boleh kosong" });
+          return;
+        }
+
+        const price = Number(body.price);
+        if (!Number.isFinite(price) || price <= 0) {
+          res.status(422).json({ success: false, data: null, error: "Harga menu harus lebih dari 0" });
+          return;
+        }
+
+        const category = String(body.category || "Bingke").trim() || "Bingke";
+
+        const lastItem = await Menu.findOne({ isActive: { $ne: false } }).sort({ order: -1 });
+        const newOrder = typeof lastItem?.order === "number" && !isNaN(lastItem.order) ? lastItem.order + 1 : 0;
+
+        // Check if item already exists (including soft-deleted)
+        const existing = await Menu.findOne({ name });
+        if (existing) {
+          if (!existing.isActive) {
+            existing.isActive = true;
+            existing.price = price;
+            existing.category = category;
+            existing.order = typeof body.order === "number" && !isNaN(body.order) ? body.order : newOrder;
+            await existing.save();
+            res.status(200).json({ success: true, data: existing });
+            return;
+          }
+          res.status(400).json({ success: false, data: null, error: `Menu "${name}" sudah ada` });
+          return;
+        }
+
+        const menuItem = await Menu.create({
+          ...body,
+          name,
+          price,
+          category,
+          order: typeof body.order === "number" && !isNaN(body.order) ? body.order : newOrder,
+          isActive: true,
+        });
         res.status(201).json({ success: true, data: menuItem });
       } catch (error) {
         res.status(400).json({ success: false, data: null, error: error instanceof Error ? error.message : "create failed" });
@@ -49,8 +124,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           const rows = req.body as ReorderRow[];
           await Promise.all(
             rows
-              .filter((r) => typeof r.id === "string")
-              .map((r) => Menu.findByIdAndUpdate(String(r.id), { order: Number(r.order) ?? 0 }, { new: true })),
+              .filter((r) => r.id && typeof r.id === "string")
+              .map((r) => {
+                const ord = Number(r.order);
+                return Menu.findByIdAndUpdate(String(r.id), { order: Number.isFinite(ord) ? ord : 0 }, { new: true });
+              }),
           );
           res.status(200).json({ success: true, data: null });
         } else {
