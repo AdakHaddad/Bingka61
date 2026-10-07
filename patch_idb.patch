@@ -1,0 +1,15 @@
+--- lib/idb.ts
++++ lib/idb.ts
+@@ -63,6 +63,12 @@
+   if (transaction) await requestResult(store.put({ ...transaction, synced: false, syncStatus: "failed", syncError: error instanceof Error ? error.message : "Sync failed" }));
+ }
+ 
++export async function deleteTransactionLocal(localId: string): Promise<void> {
++  const db = await initDB();
++  const store = db.transaction(STORE_NAME, "readwrite").objectStore(STORE_NAME);
++  await requestResult(store.delete(localId));
++}
++
+ export async function removeSyncedTransactions(): Promise<void> { /* Local sales are intentionally never deleted. */ }
+ 
+ export async function getSyncSummary(): Promise<SyncSummary> {

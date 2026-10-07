@@ -111,6 +111,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
       break;
     }
+    case "DELETE": {
+      try {
+        const { id } = req.body;
+        if (!id) {
+          res.status(400).json({ success: false, data: null, error: "ID transaksi diperlukan" });
+          return;
+        }
+        await Transaction.findByIdAndDelete(id);
+        res.status(200).json({ success: true, data: null });
+      } catch (error) {
+        res.status(400).json({ success: false, data: null, error: error instanceof Error ? error.message : "Gagal menghapus transaksi" });
+      }
+      break;
+    }
     default:
       res.status(400).json({ success: false, data: null });
       break;

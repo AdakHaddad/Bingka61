@@ -2,7 +2,7 @@ import React from "react";
 import type { ReactNode } from "react";
 import Head from "next/head";
 
-export const metadata = {
+const metadata = {
   title: "Bingke 61",
   description:
     "Toko kue oleh-oleh lengkap khas Pontianak serta makanan ringan. Temukan rasa yang kaya dan warisan budaya Kalimantan Barat melalui pilihan eksklusif kami dari kue oleh-oleh. Kunjungi kami hari ini dan nikmati cita rasa masakan Indonesia yang otentik. ",

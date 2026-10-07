@@ -63,6 +63,12 @@ export async function markTransactionSyncFailed(localId: string, error: unknown)
   if (transaction) await requestResult(store.put({ ...transaction, synced: false, syncStatus: "failed", syncError: error instanceof Error ? error.message : "Sync failed" }));
 }
 
+export async function deleteTransactionLocal(localId: string): Promise<void> {
+  const db = await initDB();
+  const store = db.transaction(STORE_NAME, "readwrite").objectStore(STORE_NAME);
+  await requestResult(store.delete(localId));
+}
+
 export async function removeSyncedTransactions(): Promise<void> { /* Local sales are intentionally never deleted. */ }
 
 export async function getSyncSummary(): Promise<SyncSummary> {
